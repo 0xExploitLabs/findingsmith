@@ -21,6 +21,7 @@ import {
 import { ThemeToggle } from "../../ui/ThemeToggle";
 import { toast } from "../../ui/toast";
 import { Wordmark } from "../../ui/Wordmark";
+import { ReportSketch } from "./ReportSketch";
 
 interface Card {
   project: Project;
@@ -95,33 +96,37 @@ export function Home() {
           className="pointer-events-none absolute inset-x-0 top-0 h-[340px] bg-[radial-gradient(60%_100%_at_50%_0%,rgb(var(--brand-glow)/0.13),transparent)]"
         />
         <div className="relative mx-auto max-w-[1120px] px-6 pb-24 pt-16">
-          <div className="max-w-[640px]">
-            <h1 className="text-balance text-[40px] font-semibold leading-[1.08] tracking-[-0.03em]">
-              Pentest reports, written in Markdown<span className="text-accent">.</span>
-            </h1>
-            <p className="mt-4 text-[15px] leading-relaxed text-ink-muted">
-              Score findings with CVSS 3.1 or 4.0, paste in your evidence and download a clean,
-              typeset PDF. Everything stays in this browser: no account, no server.
-            </p>
-            <div className="mt-7 flex flex-wrap gap-2.5">
-              <Button variant="primary" icon={<Plus />} onClick={() => setCreating(true)}>
-                New project
-              </Button>
-              <Button icon={<FileUp />} onClick={() => fileInput.current?.click()}>
-                Import project file
-              </Button>
-              <input
-                ref={fileInput}
-                type="file"
-                accept=".json,application/json"
-                hidden
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  e.target.value = "";
-                  if (file) void importFile(file);
-                }}
-              />
+          <div className="flex items-center justify-between gap-10">
+            <div className="max-w-[600px]">
+              <h1 className="text-balance text-[40px] font-semibold leading-[1.08] tracking-[-0.03em]">
+                Pentest reports, written like notes<span className="text-accent">.</span>
+              </h1>
+              <p className="mt-4 text-[15px] leading-relaxed text-ink-muted">
+                Write each finding in Markdown, paste in screenshots and requests, and download a
+                typeset PDF your client can read. Severity follows the CVSS score. Everything stays
+                in this browser: no account, no server.
+              </p>
+              <div className="mt-7 flex flex-wrap gap-2.5">
+                <Button variant="primary" icon={<Plus />} onClick={() => setCreating(true)}>
+                  New project
+                </Button>
+                <Button icon={<FileUp />} onClick={() => fileInput.current?.click()}>
+                  Import project file
+                </Button>
+                <input
+                  ref={fileInput}
+                  type="file"
+                  accept=".json,application/json"
+                  hidden
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = "";
+                    if (file) void importFile(file);
+                  }}
+                />
+              </div>
             </div>
+            <ReportSketch />
           </div>
 
           <div className="mt-16 flex items-baseline justify-between">
