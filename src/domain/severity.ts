@@ -1,4 +1,4 @@
-import { type CvssScore, scoreVector } from "./cvss";
+import { type CvssScore, readCvss } from "./cvss";
 import { type Finding, SEVERITIES, type Severity } from "./types";
 
 export type SeveritySource = "cvss" | "override" | "manual";
@@ -12,13 +12,20 @@ export interface Rating {
   cvssSeverity: Severity | null;
 }
 
+/** The finding's CVSS score, or null when the field is empty or not valid. */
+export function cvssOf(finding: Pick<Finding, "cvss">): CvssScore | null {
+  if (!finding.cvss.trim()) return null;
+  const read = readCvss(finding.cvss);
+  return read.ok ? read.cvss : null;
+}
+
 /**
  * One rule decides a finding's severity, everywhere it is shown:
- * a valid CVSS vector decides it, unless the tester has recorded an override
- * with a reason; without a vector, the tester's manual choice stands.
+ * a valid CVSS score decides it, unless the tester has recorded an override
+ * with a reason; without a score, the tester's own choice stands.
  */
-export function rate(finding: Pick<Finding, "cvssVector" | "manualSeverity" | "override">): Rating {
-  const cvss = finding.cvssVector ? scoreVector(finding.cvssVector) : null;
+export function rate(finding: Pick<Finding, "cvss" | "manualSeverity" | "override">): Rating {
+  const cvss = cvssOf(finding);
   if (cvss) {
     if (finding.override && finding.override.severity !== cvss.severity) {
       return {

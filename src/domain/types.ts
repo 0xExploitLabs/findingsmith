@@ -28,7 +28,6 @@ export interface Project {
   accent: string;
   /** Asset id of an optional logo shown on the cover. */
   logoAssetId: string | null;
-  defaultCvssVersion: CvssVersion;
   /**
    * The report's own text as one Markdown document. Each `## Heading` becomes a
    * numbered section placed before the findings: summary, scope, methodology.
@@ -54,14 +53,21 @@ export interface Finding {
   order: number;
   title: string;
   status: FindingStatus;
-  /** A full CVSS vector string ("CVSS:3.1/..." or "CVSS:4.0/..."), or "" when unscored. */
-  cvssVector: string;
-  /** Used only when the finding has no CVSS vector. */
+  /** A CVSS 3.1 or 4.0 vector, or a bare base score such as "5.3"; "" when unscored. */
+  cvss: string;
+  /** Used only when the finding has no CVSS score. */
   manualSeverity: Severity;
   override: SeverityOverride | null;
   cwe: string;
   cve: string;
-  /** One affected host, URL or component per line. */
+  /** HTTP method of the affected endpoint, such as GET. */
+  method: string;
+  /** URL or path of the affected endpoint. */
+  endpoint: string;
+  parameter: string;
+  host: string;
+  port: string;
+  /** Other affected hosts, URLs or components, one per line. */
   affected: string;
   /**
    * The write-up as one Markdown document. Each `## Heading` (Description,

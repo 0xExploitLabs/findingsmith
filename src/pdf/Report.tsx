@@ -917,7 +917,7 @@ function FindingDetail({
             </Text>
           </View>
           <View style={{ flex: 1, padding: 10, justifyContent: "center" }}>
-            {rating.cvss ? (
+            {rating.cvss?.vector ? (
               <>
                 <Text
                   style={{
@@ -934,7 +934,9 @@ function FindingDetail({
               </>
             ) : (
               <Text style={{ fontSize: 8.4, color: MUTED }}>
-                Rated by the assessor without a CVSS vector.
+                {rating.cvss
+                  ? "CVSS base score as reported by the assessor."
+                  : "Rated by the assessor without a CVSS score."}
               </Text>
             )}
             <Text style={{ fontSize: 8, color: MUTED, marginTop: 6 }}>
@@ -961,8 +963,39 @@ function FindingDetail({
         ) : null}
       </View>
 
-      {affected.length > 0 || f.cwe || f.cve ? (
+      {affected.length > 0 ||
+      f.endpoint ||
+      f.method ||
+      f.parameter ||
+      f.host ||
+      f.port ||
+      f.cwe ||
+      f.cve ? (
         <View style={{ marginTop: 14 }}>
+          {f.endpoint || f.method ? (
+            <MetaRow label="Endpoint">
+              <Text style={mono}>
+                {f.method ? (
+                  <Text style={{ fontWeight: 700, color: ctx.accent }}>{`${f.method} `}</Text>
+                ) : null}
+                {f.endpoint}
+              </Text>
+            </MetaRow>
+          ) : null}
+          {f.parameter ? (
+            <MetaRow label="Parameter">
+              <Text style={mono}>{f.parameter}</Text>
+            </MetaRow>
+          ) : null}
+          {f.host ? (
+            <MetaRow label="Host">
+              <Text style={mono}>{f.port ? `${f.host}:${f.port}` : f.host}</Text>
+            </MetaRow>
+          ) : f.port ? (
+            <MetaRow label="Port">
+              <Text style={mono}>{f.port}</Text>
+            </MetaRow>
+          ) : null}
           {affected.length > 0 ? (
             <MetaRow label="Affected">
               {affected.map((a) => (

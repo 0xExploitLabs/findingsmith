@@ -1,6 +1,7 @@
 import { CircleAlert, CircleCheck, Download, LoaderCircle } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { download, safeFilename } from "../../data/transfer";
+import { cvssOf } from "../../domain/severity";
 import type { Finding, Project } from "../../domain/types";
 import { findSection, splitSections } from "../../markdown/sections";
 import { href } from "../../state/router";
@@ -35,7 +36,7 @@ function checks(project: Project, findings: Finding[], refs: Map<string, string>
       sections.length > 0 &&
         !findSection(sections, /remediat|recommend|fix|mitigat/i) &&
         "remediation",
-      !f.cvssVector && "a CVSS score",
+      !cvssOf(f) && f.manualSeverity !== "Info" && "a CVSS score",
     ].filter(Boolean);
     if (missing.length > 0) {
       list.push({ ok: false, label: `${ref} needs ${missing.join(", ")}`, link });

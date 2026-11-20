@@ -1,26 +1,26 @@
 import {
+  Bug,
   CircleDot,
   Copy,
   Gauge,
   Hash,
+  Layers,
+  Link2,
   MoreHorizontal,
   NotebookPen,
+  Plug,
+  Plus,
   Server,
   ShieldAlert,
+  SlidersHorizontal,
   Trash2,
   Undo2,
   X,
 } from "lucide-react";
-import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { formatScore } from "../../domain/cvss";
+import { type ReactNode, useEffect, useRef, useState } from "react";
+import { formatScore, RATING_SCALE, readCvss } from "../../domain/cvss";
 import { rate } from "../../domain/severity";
-import {
-  type Finding,
-  type Project,
-  SEVERITIES,
-  type Severity,
-  STATUSES,
-} from "../../domain/types";
+import { type Finding, SEVERITIES, type Severity, STATUSES } from "../../domain/types";
 import {
   Button,
   cx,
@@ -32,8 +32,8 @@ import {
   SeverityBadge,
   TextArea,
 } from "../../ui/primitives";
-import { CvssDialog } from "../cvss/CvssDialog";
-import { DocEditor } from "../editor/DocEditor";
+import { AddSections, InlineText, Property, Title } from "../doc/DocParts";
+import { type DocController, DocEditor } from "../editor/DocEditor";
 
 export const STATUS_DOT: Record<Finding["status"], string> = {
   Open: "bg-sev-high",
@@ -42,31 +42,99 @@ export const STATUS_DOT: Record<Finding["status"], string> = {
   "Risk accepted": "bg-sev-info",
 };
 
+/** The sections a finding usually has, offered under the write-up until present. */
+export const FINDING_SECTIONS = [
+  "Description",
+  "Impact",
+  "Steps to reproduce",
+  "Request and response",
+  "Remediation",
+  "References",
+];
+
+const METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"] as const;
+
+type OptionalKey = "endpoint" | "parameter" | "host" | "port" | "affected" | "cwe" | "cve";
+
+/** Properties a finding can have, added from the picker when they apply. */
+const OPTIONAL: { key: OptionalKey; label: string; icon: ReactNode; hint: string }[] = [
+  {
+    key: "endpoint",
+    label: "Endpoint",
+    icon: <Link2 />,
+    hint: "Method and URL of the affected request",
+  },
+  {
+    key: "parameter",
+    label: "Parameter",
+    icon: <SlidersHorizontal />,
+    hint: "The vulnerable parameter",
+  },
+  { key: "host", label: "Host", icon: <Server />, hint: "IP address or hostname" },
+  { key: "port", label: "Port", icon: <Plug />, hint: "Port of the affected service" },
+  { key: "affected", label: "Affected", icon: <Layers />, hint: "Other hosts, URLs or components" },
+  { key: "cwe", label: "CWE", icon: <Bug />, hint: "Weakness ID, such as CWE-639" },
+  { key: "cve", label: "CVE", icon: <ShieldAlert />, hint: "CVE ID, if one exists" },
+];
+
+function hasValue(f: Finding, key: OptionalKey): boolean {
+  return key === "endpoint" ? !!(f.endpoint || f.method) : !!f[key].trim();
+}
+
 export function FindingEditor({
   finding,
   reference,
-  project,
   onChange,
   onDuplicate,
   onDelete,
 }: {
   finding: Finding;
   reference: string;
-  project: Project;
   onChange: (patch: Partial<Finding>) => void;
   onDuplicate: () => void;
   onDelete: () => void;
 }) {
-  const [cvssOpen, setCvssOpen] = useState(false);
-  const [overrideOpen, setOverrideOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(!!finding.notes.trim());
+  const [override, setOverride] = useState<Severity | null>(null);
+  const [shown, setShown] = useState<Set<OptionalKey>>(
+    () => new Set(OPTIONAL.filter((p) => hasValue(finding, p.key)).map((p) => p.key)),
+  );
+  const [justAdded, setJustAdded] = useState<OptionalKey | null>(null);
+  const editor = useRef<DocController | null>(null);
   const rating = rate(finding);
+  const cvssRead = finding.cvss.trim() ? readCvss(finding.cvss) : null;
+  const cvssSeverity = rating.cvssSeverity;
+
+  const pickSeverity = (s: Severity) => {
+    if (!cvssSeverity) onChange({ manualSeverity: s });
+    else if (s === cvssSeverity) onChange({ override: null });
+    else setOverride(s);
+  };
+
+  const remove = (key: OptionalKey) => {
+    onChange(key === "endpoint" ? { endpoint: "", method: "" } : { [key]: "" });
+    setShown((prev) => {
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
+  };
+
+  const hidden = OPTIONAL.filter((p) => !shown.has(p.key));
 
   return (
     <div className="flex min-h-full">
-      <article className="mx-auto w-full min-w-0 max-w-[780px] px-6 pb-8 pt-12 sm:px-12">
-        <div className="flex items-center gap-1 text-[12.5px] text-ink-faint">
-          <span className="font-mono font-semibold text-accent">{reference}</span>
+      <article className="mx-auto w-full min-w-0 max-w-[800px] px-6 pb-10 pt-10 sm:px-14">
+        <div className="mb-4 flex items-center gap-2">
+          <span
+            className={cx(
+              "rounded-md px-1.5 py-0.5 font-mono text-[12px] font-semibold",
+              SEVERITY_CLASS[rating.severity].soft,
+              SEVERITY_CLASS[rating.severity].text,
+            )}
+          >
+            {reference}
+          </span>
           <div className="flex-1" />
           <IconButton
             label={notesOpen ? "Hide private notes" : "Private notes"}
@@ -96,48 +164,44 @@ export function FindingEditor({
           value={finding.title}
           onChange={(title) => onChange({ title })}
           focusWhenEmpty={finding.id}
+          placeholder="Untitled finding"
         />
 
-        <dl className="mt-5 border-b border-line pb-5">
+        <dl className="mt-6">
           <Property icon={<Gauge />} label="Severity">
-            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-              {rating.source === "manual" ? (
-                <Menu
-                  heading="Severity"
-                  value={finding.manualSeverity}
-                  items={SEVERITIES.map((s) => ({
-                    value: s,
-                    label: <SeverityLabel severity={s} />,
-                  }))}
-                  onSelect={(s) => onChange({ manualSeverity: s })}
-                  trigger={({ toggle, ref, open }) => (
-                    <button
-                      ref={ref}
-                      type="button"
-                      onClick={toggle}
-                      aria-expanded={open}
-                      aria-label="Severity"
-                      className="rounded-md hover:opacity-85"
-                    >
-                      <SeverityBadge severity={finding.manualSeverity} />
-                    </button>
-                  )}
-                />
-              ) : (
-                <SeverityBadge severity={rating.severity} />
-              )}
+            <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
+              <Menu
+                heading={cvssSeverity ? `CVSS rates it ${cvssSeverity}` : "Severity"}
+                value={rating.severity}
+                width={250}
+                items={SEVERITIES.map((s) => ({
+                  value: s,
+                  label: (
+                    <span className="flex items-center justify-between gap-3">
+                      <SeverityLabel severity={s} />
+                      <span className="font-mono text-[11px] text-ink-faint">
+                        {RATING_SCALE.find((r) => r.severity === s)?.range.replace(" (None)", "")}
+                      </span>
+                    </span>
+                  ),
+                }))}
+                onSelect={pickSeverity}
+                trigger={({ toggle, ref, open }) => (
+                  <button
+                    ref={ref}
+                    type="button"
+                    onClick={toggle}
+                    aria-expanded={open}
+                    aria-label={`Severity: ${rating.severity}`}
+                    className="rounded-md transition-opacity hover:opacity-85"
+                  >
+                    <SeverityBadge severity={rating.severity} />
+                  </button>
+                )}
+              />
               <span className="text-[13px] text-ink-faint">
                 {rating.source === "cvss" ? (
-                  <>
-                    from the CVSS score
-                    <button
-                      type="button"
-                      onClick={() => setOverrideOpen(true)}
-                      className="ml-2 text-ink-muted underline decoration-line-strong underline-offset-2 hover:text-ink"
-                    >
-                      Override
-                    </button>
-                  </>
+                  "from the CVSS score"
                 ) : rating.source === "override" ? (
                   <>
                     adjusted from{" "}
@@ -146,44 +210,24 @@ export function FindingEditor({
                     </span>
                     <button
                       type="button"
-                      onClick={() => setOverrideOpen(true)}
+                      onClick={() => setOverride(rating.severity)}
                       className="ml-2 text-ink-muted underline decoration-line-strong underline-offset-2 hover:text-ink"
                     >
-                      Edit
+                      Reason
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onChange({ override: null })}
+                      className="ml-2 text-ink-muted underline decoration-line-strong underline-offset-2 hover:text-ink"
+                    >
+                      Use CVSS
                     </button>
                   </>
                 ) : (
-                  "set by hand. Add a CVSS score to derive it."
+                  "set by you"
                 )}
               </span>
             </div>
-          </Property>
-
-          <Property icon={<Hash />} label="CVSS">
-            <button
-              type="button"
-              onClick={() => setCvssOpen(true)}
-              aria-label={rating.cvss ? "Edit CVSS score" : "Add CVSS score"}
-              className="-mx-1.5 flex min-w-0 max-w-full items-baseline gap-2.5 rounded-md px-1.5 py-0.5 text-left transition-colors hover:bg-hover"
-            >
-              {rating.cvss ? (
-                <>
-                  <span
-                    className={cx(
-                      "text-[14px] font-semibold",
-                      SEVERITY_CLASS[rating.cvss.severity].text,
-                    )}
-                  >
-                    {formatScore(rating.cvss.score)}
-                  </span>
-                  <span className="min-w-0 truncate font-mono text-[12px] text-ink-muted">
-                    {rating.cvss.vector}
-                  </span>
-                </>
-              ) : (
-                <span className="text-[13.5px] text-ink-faint">Add score</span>
-              )}
-            </button>
           </Property>
 
           <Property icon={<CircleDot />} label="Status">
@@ -206,8 +250,8 @@ export function FindingEditor({
                   type="button"
                   onClick={toggle}
                   aria-expanded={open}
-                  aria-label="Status"
-                  className="-mx-1.5 flex items-center gap-2 rounded-md px-1.5 py-0.5 text-[13.5px] hover:bg-hover"
+                  aria-label={`Status: ${finding.status}`}
+                  className="-mx-1.5 flex items-center gap-2 rounded-md px-1.5 py-0.5 text-[14px] hover:bg-hover"
                 >
                   <span className={cx("size-2 rounded-full", STATUS_DOT[finding.status])} />
                   {finding.status}
@@ -216,53 +260,138 @@ export function FindingEditor({
             />
           </Property>
 
-          <Property icon={<Server />} label="Affected">
-            <InlineText
-              value={finding.affected}
-              onChange={(affected) => onChange({ affected })}
-              placeholder="Hosts or URLs, one per line"
-              multiline
-              mono
-              label="Affected assets"
-            />
-          </Property>
-
-          <Property icon={<ShieldAlert />} label="CWE / CVE">
-            <div className="flex min-w-0 flex-1 gap-3">
-              <div className="w-[120px] shrink-0">
-                <InlineText
-                  value={finding.cwe}
-                  onChange={(cwe) => onChange({ cwe })}
-                  placeholder="CWE-639"
-                  mono
-                  label="CWE"
-                />
-              </div>
+          <Property icon={<Hash />} label="CVSS">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
               <InlineText
-                value={finding.cve}
-                onChange={(cve) => onChange({ cve })}
-                placeholder="CVE, if any"
+                value={finding.cvss}
+                onChange={(cvss) => onChange({ cvss: cvss.replace(/\s+/g, "") })}
+                placeholder="Paste a vector or a score"
                 mono
-                label="CVE"
+                label="CVSS vector or score"
+                fit
+                invalid={cvssRead?.ok === false}
               />
+              {cvssRead?.ok ? (
+                <span
+                  className={cx(
+                    "shrink-0 font-mono text-[13px] font-semibold",
+                    SEVERITY_CLASS[cvssRead.cvss.severity].text,
+                  )}
+                  title={cvssRead.cvss.nomenclature}
+                >
+                  {formatScore(cvssRead.cvss.score)}
+                </span>
+              ) : cvssRead ? (
+                <span className="shrink-0 text-[12px] text-danger" title={cvssRead.error}>
+                  Not a valid vector or score
+                </span>
+              ) : null}
             </div>
           </Property>
+
+          {OPTIONAL.filter((p) => shown.has(p.key)).map((p) => (
+            <Property key={p.key} icon={p.icon} label={p.label} onRemove={() => remove(p.key)}>
+              {p.key === "endpoint" ? (
+                <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                  <Menu
+                    heading="Method"
+                    value={finding.method as (typeof METHODS)[number]}
+                    width={150}
+                    items={METHODS.map((m) => ({
+                      value: m,
+                      label: <span className="font-mono">{m}</span>,
+                    }))}
+                    onSelect={(method) => onChange({ method })}
+                    trigger={({ toggle, ref, open }) => (
+                      <button
+                        ref={ref}
+                        type="button"
+                        onClick={toggle}
+                        aria-expanded={open}
+                        aria-label="HTTP method"
+                        className={cx(
+                          "h-7 shrink-0 rounded-md border border-line-strong px-2 font-mono text-[11.5px] font-semibold hover:bg-hover",
+                          finding.method ? "text-accent" : "text-ink-faint",
+                        )}
+                      >
+                        {finding.method || "METHOD"}
+                      </button>
+                    )}
+                  />
+                  <InlineText
+                    value={finding.endpoint}
+                    onChange={(endpoint) => onChange({ endpoint })}
+                    placeholder="https://app.example.com/api/invoices/{id}"
+                    mono
+                    label="Endpoint URL"
+                    autoFocus={justAdded === "endpoint"}
+                  />
+                </div>
+              ) : (
+                <InlineText
+                  value={finding[p.key]}
+                  onChange={(v) => onChange({ [p.key]: v })}
+                  placeholder={p.hint}
+                  mono={p.key !== "affected"}
+                  multiline={p.key === "affected"}
+                  label={p.label}
+                  autoFocus={justAdded === p.key}
+                />
+              )}
+            </Property>
+          ))}
         </dl>
 
+        {hidden.length > 0 ? (
+          <Menu
+            heading="Add property"
+            width={280}
+            items={hidden.map((p) => ({
+              value: p.key,
+              label: p.label,
+              hint: p.hint,
+              icon: p.icon,
+            }))}
+            onSelect={(key) => {
+              setShown((prev) => new Set(prev).add(key));
+              setJustAdded(key);
+            }}
+            trigger={({ toggle, ref, open }) => (
+              <button
+                ref={ref}
+                type="button"
+                onClick={toggle}
+                aria-expanded={open}
+                className="mt-1 flex h-7 items-center gap-2 rounded-md px-1.5 text-[13px] text-ink-faint transition-colors hover:bg-hover hover:text-ink [&_svg]:size-[15px]"
+              >
+                <Plus />
+                Add property
+              </button>
+            )}
+          />
+        ) : null}
+
         {rating.source === "override" && finding.override?.reason ? (
-          <p className="mt-4 text-[13px] leading-relaxed text-ink-muted">
-            <span className="text-ink">Override reason:</span> {finding.override.reason}
+          <p className="mt-4 rounded-lg border-l-2 border-line-strong bg-surface-1 px-3.5 py-2.5 text-[13px] leading-relaxed text-ink-muted">
+            <span className="font-medium text-ink">Why {rating.severity}:</span>{" "}
+            {finding.override.reason}
           </p>
         ) : null}
 
-        <div className="mt-7">
+        <div className="mt-6 border-t border-line pt-7">
           <DocEditor
             key={finding.id}
+            controller={editor}
             label="Finding write-up"
             projectId={finding.projectId}
             value={finding.body}
             onChange={(body) => onChange({ body })}
-            placeholder="Write the finding. Use ## headings for sections such as Description, Impact, Steps to reproduce and Remediation."
+            placeholder="Describe the finding. Each ## heading becomes a section of the report."
+          />
+          <AddSections
+            body={finding.body}
+            sections={FINDING_SECTIONS}
+            onAdd={(title) => editor.current?.addSection(title)}
           />
         </div>
       </article>
@@ -290,147 +419,14 @@ export function FindingEditor({
         </aside>
       ) : null}
 
-      <CvssDialog
-        open={cvssOpen}
-        onClose={() => setCvssOpen(false)}
-        vector={finding.cvssVector}
-        defaultVersion={project.defaultCvssVersion}
-        onApply={(v) => onChange({ cvssVector: v })}
-      />
       <OverrideDialog
-        open={overrideOpen}
-        onClose={() => setOverrideOpen(false)}
+        severity={override}
+        onClose={() => setOverride(null)}
         finding={finding}
-        cvssSeverity={rating.cvssSeverity ?? rating.severity}
-        onSave={(override) => onChange({ override })}
+        cvssSeverity={cvssSeverity ?? rating.severity}
+        onSave={(o) => onChange({ override: o })}
       />
     </div>
-  );
-}
-
-/** A large, borderless, auto-growing title, as in a document app. */
-export function Title({
-  value,
-  onChange,
-  focusWhenEmpty,
-  placeholder = "Untitled finding",
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  focusWhenEmpty?: string;
-  placeholder?: string;
-}) {
-  const ref = useRef<HTMLTextAreaElement>(null);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: re-measure whenever the text changes
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    el.style.height = "0px";
-    el.style.height = `${el.scrollHeight}px`;
-  }, [value]);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: only when a different document opens
-  useEffect(() => {
-    if (!value) ref.current?.focus();
-  }, [focusWhenEmpty]);
-  return (
-    <textarea
-      ref={ref}
-      value={value}
-      onChange={(e) => onChange(e.target.value.replace(/\n/g, " "))}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          document.querySelector<HTMLElement>("article .doc-editor .cm-content")?.focus();
-        }
-      }}
-      placeholder={placeholder}
-      rows={1}
-      spellCheck={false}
-      autoCorrect="off"
-      aria-label="Title"
-      className="mt-3 block w-full resize-none overflow-hidden bg-transparent text-[32px] font-semibold leading-[1.18] tracking-[-0.022em] text-ink outline-none placeholder:text-ink-faint"
-    />
-  );
-}
-
-export function Property({
-  icon,
-  label,
-  children,
-}: {
-  icon: ReactNode;
-  label: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="flex min-h-[34px] items-start gap-3 py-[3px]">
-      <dt className="flex h-7 w-[124px] shrink-0 items-center gap-2 text-[13px] text-ink-faint [&_svg]:size-[15px]">
-        {icon}
-        {label}
-      </dt>
-      <dd className="flex min-h-7 min-w-0 flex-1 items-center">{children}</dd>
-    </div>
-  );
-}
-
-/** Text that reads as plain text until hovered or focused, like a property value. */
-export function InlineText({
-  value,
-  onChange,
-  placeholder,
-  multiline,
-  mono,
-  label,
-  className,
-  type = "text",
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder: string;
-  multiline?: boolean;
-  mono?: boolean;
-  label: string;
-  className?: string;
-  type?: string;
-}) {
-  const area = useRef<HTMLTextAreaElement>(null);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: re-measure whenever the text changes
-  useLayoutEffect(() => {
-    const el = area.current;
-    if (!el) return;
-    el.style.height = "0px";
-    el.style.height = `${el.scrollHeight}px`;
-  }, [value]);
-  const cls = cx(
-    "-mx-1.5 block w-full min-w-0 rounded-md bg-transparent px-1.5 py-[3px] text-[13.5px] text-ink outline-none transition-colors placeholder:text-ink-faint hover:bg-hover focus:bg-hover",
-    mono && "font-mono text-[12.5px] placeholder:font-sans placeholder:text-[13.5px]",
-    className,
-  );
-  const proofing = {
-    spellCheck: false,
-    autoCorrect: "off",
-    autoComplete: "off",
-    "aria-label": label,
-  } as const;
-  return multiline ? (
-    <textarea
-      ref={area}
-      rows={1}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      {...proofing}
-      className={cx(cls, "resize-none overflow-hidden leading-relaxed")}
-    />
-  ) : (
-    <input
-      type={type}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      {...proofing}
-      className={cls}
-    />
   );
 }
 
@@ -443,38 +439,40 @@ function SeverityLabel({ severity }: { severity: Severity }) {
   );
 }
 
+/**
+ * Rating a scored finding differently from its CVSS score needs a reason; the
+ * report prints both ratings and the reason.
+ */
 function OverrideDialog({
-  open,
+  severity,
   onClose,
   finding,
   cvssSeverity,
   onSave,
 }: {
-  open: boolean;
+  /** The severity being chosen; the dialog is open while this is set. */
+  severity: Severity | null;
   onClose: () => void;
   finding: Finding;
   cvssSeverity: Severity;
   onSave: (override: Finding["override"]) => void;
 }) {
-  const [severity, setSeverity] = useState<Severity>(cvssSeverity);
   const [reason, setReason] = useState("");
   useEffect(() => {
-    if (!open) return;
-    setSeverity(finding.override?.severity ?? cvssSeverity);
-    setReason(finding.override?.reason ?? "");
-  }, [open, finding.override, cvssSeverity]);
-  const changed = severity !== cvssSeverity;
+    if (severity) setReason(finding.override?.reason ?? "");
+  }, [severity, finding.override]);
+  if (!severity) return null;
   return (
     <Dialog
-      open={open}
+      open
       onClose={onClose}
-      width={500}
-      title="Override severity"
+      width={480}
+      title={`Rate this finding ${severity}?`}
       description={
         <>
-          The CVSS score rates this finding{" "}
-          <span className={SEVERITY_CLASS[cvssSeverity].text}>{cvssSeverity}</span>. If the context
-          justifies a different rating, the report shows both and your reason.
+          Its CVSS score rates it{" "}
+          <span className={SEVERITY_CLASS[cvssSeverity].text}>{cvssSeverity}</span>. Say why the
+          context changes that; the report shows both ratings and your reason.
         </>
       }
       footer={
@@ -497,47 +495,18 @@ function OverrideDialog({
           </Button>
           <Button
             variant="primary"
-            disabled={!changed || reason.trim().length < 10}
+            disabled={reason.trim().length < 10}
             onClick={() => {
               onSave({ severity, reason: reason.trim() });
               onClose();
             }}
           >
-            Save override
+            Rate {severity}
           </Button>
         </>
       }
     >
-      <fieldset className="grid min-w-0 grid-cols-5 gap-1.5">
-        <legend className="sr-only">Severity</legend>
-        {SEVERITIES.map((s) => (
-          <button
-            key={s}
-            type="button"
-            aria-pressed={severity === s}
-            onClick={() => setSeverity(s)}
-            className={cx(
-              "flex h-16 flex-col items-center justify-center gap-1.5 rounded-xl border text-[12px] font-semibold transition-colors",
-              severity === s
-                ? cx(SEVERITY_CLASS[s].soft, SEVERITY_CLASS[s].text)
-                : "border-line-strong text-ink-muted hover:text-ink",
-            )}
-          >
-            <span className={cx("size-2 rounded-[2px]", SEVERITY_CLASS[s].dot)} />
-            {s}
-            {s === cvssSeverity ? (
-              <span className="-mt-1 text-[9.5px] font-medium uppercase tracking-wide opacity-70">
-                CVSS
-              </span>
-            ) : null}
-          </button>
-        ))}
-      </fieldset>
-      <Field
-        label="Reason"
-        hint="Required. Printed in the report next to the rating."
-        className="mt-5"
-      >
+      <Field label="Reason" hint="At least a sentence. Printed in the report next to the rating.">
         {(id) => (
           <TextArea
             id={id}

@@ -51,7 +51,7 @@ export function Workspace({ route }: { route: Extract<Route, { projectId: string
     setLibraryOpen(false);
     const f = await ws.addFinding({
       title: entry.title,
-      cvssVector: entry.vector,
+      cvss: entry.vector,
       cwe: entry.cwe,
       body: libraryBody(entry),
     });
@@ -121,7 +121,6 @@ export function Workspace({ route }: { route: Extract<Route, { projectId: string
               <FindingEditor
                 finding={finding}
                 reference={refs.get(finding.id) ?? ""}
-                project={project}
                 onChange={(patch) => ws.updateFinding(finding.id, patch)}
                 onDuplicate={async () => {
                   const { id: _id, createdAt: _c, updatedAt: _u, order: _o, ...rest } = finding;

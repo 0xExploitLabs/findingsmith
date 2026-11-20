@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildVector, carryOver31to40, parseVector, scoreVector, severityFromScore } from "./cvss";
+import { parseVector, readCvss, scoreVector, severityFromScore } from "./cvss";
 import { rate } from "./severity";
 
 describe("CVSS 3.1 scores match the FIRST calculator", () => {
@@ -71,14 +71,36 @@ describe("the strict parser", () => {
     expect(parsed.ok && parsed.vector).toBe("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H");
   });
   it("drops an unset optional threat metric", () => {
-    expect(buildVector("4.0", { AV: "N", E: "X" })).toBe("CVSS:4.0/AV:N");
+    const parsed = parseVector(
+      "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N/E:X",
+    );
+    expect(parsed.ok && parsed.vector).toBe(
+      "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
+    );
+  });
+});
+
+describe("the CVSS field", () => {
+  it("accepts a bare base score", () => {
+    const read = readCvss(" 5.3 ");
+    expect(read.ok && read.cvss.severity).toBe("Medium");
+    expect(read.ok && read.cvss.vector).toBe(null);
+  });
+  it("rejects scores outside 0.0 to 10.0 and stray text", () => {
+    expect(readCvss("10.5").ok).toBe(false);
+    expect(readCvss("5.33").ok).toBe(false);
+    expect(readCvss("high").ok).toBe(false);
+  });
+  it("scores a vector", () => {
+    const read = readCvss("CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N");
+    expect(read.ok && read.cvss.score).toBe(6.5);
   });
 });
 
 describe("severity follows the score", () => {
   const base = { manualSeverity: "Low" as const, override: null };
   it("a 5.3 vector is Medium even when the manual choice says Low", () => {
-    const r = rate({ ...base, cvssVector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N" });
+    const r = rate({ ...base, cvss: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N" });
     expect(r.severity).toBe("Medium");
     expect(r.source).toBe("cvss");
   });
@@ -86,23 +108,17 @@ describe("severity follows the score", () => {
     const r = rate({
       manualSeverity: "Low",
       override: { severity: "Low", reason: "Internal only" },
-      cvssVector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+      cvss: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
     });
     expect(r.severity).toBe("Low");
     expect(r.source).toBe("override");
     expect(r.cvssSeverity).toBe("Medium");
   });
-  it("without a vector the manual severity stands", () => {
-    expect(rate({ ...base, cvssVector: "" }).severity).toBe("Low");
+  it("a bare score of 5.3 is Medium too", () => {
+    expect(rate({ ...base, cvss: "5.3" }).severity).toBe("Medium");
   });
-});
-
-describe("carrying a 3.1 vector over to 4.0", () => {
-  it("maps reflected XSS to a scope-changed 4.0 vector", () => {
-    const parsed = parseVector("CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N");
-    if (!parsed.ok) throw new Error("bad fixture");
-    expect(buildVector("4.0", carryOver31to40(parsed.metrics))).toBe(
-      "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:A/VC:L/VI:L/VA:N/SC:L/SI:L/SA:N",
-    );
+  it("without a score the manual severity stands", () => {
+    expect(rate({ ...base, cvss: "" }).severity).toBe("Low");
+    expect(rate({ ...base, cvss: "not a vector" }).severity).toBe("Low");
   });
 });
