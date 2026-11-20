@@ -12,11 +12,13 @@ import { FindingEditor } from "../finding/FindingEditor";
 import { LibraryDialog } from "../library/LibraryDialog";
 import { ReportView } from "../report/ReportView";
 import { ProjectPage } from "./ProjectPage";
+import { QuickSwitcher, SWITCHER_ICONS } from "./QuickSwitcher";
 import { Sidebar } from "./Sidebar";
 
 export function Workspace({ route }: { route: Extract<Route, { projectId: string }> }) {
   const ws = useWorkspace(route.projectId);
   const [libraryOpen, setLibraryOpen] = useState(false);
+  const [switcherOpen, setSwitcherOpen] = useState(false);
   const { confirm, dialog } = useConfirm();
   const { project, findings } = ws;
 
@@ -61,6 +63,10 @@ export function Workspace({ route }: { route: Extract<Route, { projectId: string
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "p") {
+        e.preventDefault();
+        setSwitcherOpen(true);
+      }
       if ((e.ctrlKey || e.metaKey) && e.altKey && e.key.toLowerCase() === "n") {
         e.preventDefault();
         void addBlank();
@@ -102,6 +108,7 @@ export function Workspace({ route }: { route: Extract<Route, { projectId: string
         onNewFinding={addBlank}
         onOpenLibrary={() => setLibraryOpen(true)}
         onReorder={ws.reorder}
+        onOpenSwitcher={() => setSwitcherOpen(true)}
         saveState={ws.saveState}
       />
       <main className="relative flex min-w-0 flex-1 flex-col">
@@ -166,6 +173,45 @@ export function Workspace({ route }: { route: Extract<Route, { projectId: string
           </div>
         )}
       </main>
+      <QuickSwitcher
+        open={switcherOpen}
+        onClose={() => setSwitcherOpen(false)}
+        findings={findings}
+        refs={refs}
+        onOpenFinding={open}
+        actions={[
+          {
+            id: "new",
+            label: "New blank finding",
+            icon: SWITCHER_ICONS.newFinding,
+            run: () => void addBlank(),
+          },
+          {
+            id: "library",
+            label: "Add a finding from the library",
+            icon: SWITCHER_ICONS.library,
+            run: () => setLibraryOpen(true),
+          },
+          {
+            id: "project",
+            label: "Project details and summary",
+            icon: SWITCHER_ICONS.project,
+            run: () => navigate({ name: "project", projectId: project.id, view: "overview" }),
+          },
+          {
+            id: "export",
+            label: "Export PDF",
+            icon: SWITCHER_ICONS.export,
+            run: () => navigate({ name: "project", projectId: project.id, view: "report" }),
+          },
+          {
+            id: "projects",
+            label: "All projects",
+            icon: SWITCHER_ICONS.projects,
+            run: () => navigate({ name: "home" }),
+          },
+        ]}
+      />
       <LibraryDialog
         open={libraryOpen}
         onClose={() => setLibraryOpen(false)}

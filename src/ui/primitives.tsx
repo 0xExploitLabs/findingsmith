@@ -380,6 +380,7 @@ export function Dialog({
   footer,
   width = 560,
   bare,
+  placement = "center",
 }: {
   open: boolean;
   onClose: () => void;
@@ -389,6 +390,8 @@ export function Dialog({
   footer?: ReactNode;
   width?: number;
   bare?: boolean;
+  /** "top" suits search palettes, which grow downwards as results change. */
+  placement?: "center" | "top";
 }) {
   const panel = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
@@ -434,7 +437,12 @@ export function Dialog({
 
   if (!open) return null;
   return createPortal(
-    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 sm:p-8">
+    <div
+      className={cx(
+        "fixed inset-0 z-[150] flex justify-center p-4 sm:p-8",
+        placement === "top" ? "items-start pt-[12vh] sm:pt-[12vh]" : "items-center",
+      )}
+    >
       <button
         type="button"
         aria-label="Close dialog"

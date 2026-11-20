@@ -16,7 +16,7 @@ import { formatScore } from "../../domain/cvss";
 import { compareFindings, rate } from "../../domain/severity";
 import { type Finding, type Project, SEVERITIES } from "../../domain/types";
 import { href, type Route } from "../../state/router";
-import { cx, IconButton, Menu, SEVERITY_CLASS } from "../../ui/primitives";
+import { cx, IconButton, Kbd, Menu, SEVERITY_CLASS } from "../../ui/primitives";
 import { ThemeToggle } from "../../ui/ThemeToggle";
 import { Wordmark } from "../../ui/Wordmark";
 
@@ -30,6 +30,7 @@ export function Sidebar({
   onNewFinding,
   onOpenLibrary,
   onReorder,
+  onOpenSwitcher,
   saveState,
 }: {
   project: Project;
@@ -39,9 +40,9 @@ export function Sidebar({
   onNewFinding: () => void;
   onOpenLibrary: () => void;
   onReorder: (ids: string[]) => void;
+  onOpenSwitcher: () => void;
   saveState: "saved" | "saving" | "error";
 }) {
-  const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortMode>("severity");
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
@@ -53,13 +54,6 @@ export function Sidebar({
         : [...findings].sort((a, b) => a.order - b.order),
     [findings, sort],
   );
-  const visible = query
-    ? ordered.filter((f) =>
-        `${f.title} ${refs.get(f.id) ?? ""} ${f.cwe} ${f.affected}`
-          .toLowerCase()
-          .includes(query.toLowerCase()),
-      )
-    : ordered;
 
   const counts = useMemo(() => {
     const c = Object.fromEntries(SEVERITIES.map((s) => [s, 0])) as Record<
@@ -72,7 +66,7 @@ export function Sidebar({
 
   const activeFinding = route.name === "finding" ? route.findingId : null;
   const view = route.name === "project" ? route.view : null;
-  const canDrag = sort === "manual" && !query;
+  const canDrag = sort === "manual";
 
   const drop = (targetId: string) => {
     if (!dragId || dragId === targetId) return;
@@ -98,7 +92,19 @@ export function Sidebar({
         <Wordmark compact />
       </div>
 
-      <div className="space-y-0.5 px-2 pt-3">
+      <div className="px-3 pt-3">
+        <button
+          type="button"
+          onClick={onOpenSwitcher}
+          className="flex h-8 w-full items-center gap-2 rounded-lg border border-line bg-surface-2 px-2.5 text-[13px] text-ink-faint transition-colors hover:border-line-strong hover:text-ink-muted"
+        >
+          <Search className="size-3.5" />
+          <span className="flex-1 text-left">Search</span>
+          <Kbd>Ctrl P</Kbd>
+        </button>
+      </div>
+
+      <div className="space-y-0.5 px-2 pt-2">
         <a
           href={href({ name: "project", projectId: project.id, view: "overview" })}
           aria-current={view === "overview" ? "page" : undefined}
@@ -189,22 +195,6 @@ export function Sidebar({
         />
       </div>
 
-      {findings.length > 3 ? (
-        <div className="px-3 pt-2">
-          <div className="flex h-8 items-center gap-2 rounded-lg border border-line bg-surface-2 px-2.5 focus-within:border-accent">
-            <Search className="size-3.5 text-ink-faint" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Filter findings"
-              spellCheck={false}
-              aria-label="Filter findings"
-              className="h-full min-w-0 flex-1 bg-transparent text-[13px] outline-none"
-            />
-          </div>
-        </div>
-      ) : null}
-
       <div className="mt-2 min-h-0 flex-1 overflow-y-auto px-2 pb-3">
         {findings.length === 0 ? (
           <div className="mx-2 mt-2 rounded-xl border border-dashed border-line-strong px-4 py-6 text-center">
@@ -228,7 +218,7 @@ export function Sidebar({
           </div>
         ) : null}
         <ul className="space-y-0.5">
-          {visible.map((f) => {
+          {ordered.map((f) => {
             const r = rate(f);
             const active = activeFinding === f.id;
             return (
