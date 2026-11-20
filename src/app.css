@@ -455,31 +455,49 @@
   font-size: 13px;
   line-height: 1.65;
   background: var(--color-code);
-  padding: 0 16px;
-  border-left: 1px solid var(--color-line-strong);
-  border-right: 1px solid var(--color-line-strong);
+  padding: 0 18px;
+  border-left: 1px solid var(--color-line);
+  border-right: 1px solid var(--color-line);
 }
-.doc-editor .cm-lp-fence {
-  color: var(--color-ink-faint);
-  min-height: 1.2em;
-}
-.doc-editor .cm-lp-fence:not(.cm-lp-codeline + .cm-lp-codeline) {
-  border-top: 1px solid var(--color-line-strong);
+.doc-editor .cm-lp-open {
+  border-top: 1px solid var(--color-line);
   border-radius: 10px 10px 0 0;
-  padding-top: 8px;
+  padding-top: 10px;
+  color: var(--color-ink-faint);
 }
-.doc-editor .cm-lp-codeline + .cm-lp-fence {
-  border-bottom: 1px solid var(--color-line-strong);
+.doc-editor .cm-lp-close {
+  border-bottom: 1px solid var(--color-line);
   border-radius: 0 0 10px 10px;
-  padding-bottom: 8px;
+  padding-bottom: 10px;
+  color: var(--color-ink-faint);
+}
+.doc-editor .cm-lp-open.cm-lp-close {
+  border-radius: 10px;
+}
+.doc-editor .cm-lp-indented {
+  color: inherit;
+}
+/* A fence line with nothing to show shrinks to padding. */
+.doc-editor .cm-lp-collapsed {
+  font-size: 0;
+  line-height: 0;
+}
+.doc-editor .cm-lp-open.cm-lp-collapsed {
+  padding-top: 12px;
+}
+.doc-editor .cm-lp-close.cm-lp-collapsed {
+  padding-bottom: 12px;
 }
 .doc-editor .cm-lp-codelabel {
+  display: inline-block;
   font-family: var(--font-sans);
   font-size: 10.5px;
   font-weight: 600;
+  line-height: 1;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--color-ink-faint);
+  padding: 2px 0 8px;
 }
 .doc-editor .cm-lp-image {
   display: inline-flex;
@@ -574,4 +592,7 @@
 .doc-editor .cm-completionMatchedText {
   text-decoration: none;
   color: var(--color-accent);
+}
+.doc-editor .cm-lp-close + .cm-line:not(.cm-lp-codeline) {
+  padding-top: 8px;
 }

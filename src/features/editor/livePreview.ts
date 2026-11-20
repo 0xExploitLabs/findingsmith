@@ -337,20 +337,37 @@ function build(state: EditorState): DecorationSet {
         case "CodeBlock": {
           const first = doc.lineAt(node.from).number;
           const last = doc.lineAt(node.to).number;
+          const fenced = name === "FencedCode";
+          // An unclosed fence runs to the end of the document; its last line is code, not a fence.
+          const closer = node.lastChild;
+          const closed =
+            fenced &&
+            last > first &&
+            closer?.name === "CodeMark" &&
+            closer.from > doc.line(first).to;
           const editing = overlapsSelection(state, node.from, node.to, focused);
           for (let n = first; n <= last; n++) {
             const ln = doc.line(n);
-            const edge = name === "FencedCode" && (n === first || n === last);
-            out.push(line(edge ? "cm-lp-codeline cm-lp-fence" : "cm-lp-codeline").range(ln.from));
-            if (edge && !editing && ln.to > ln.from) {
-              const info = n === first ? (node.getChild("CodeInfo") ?? null) : null;
+            const opening = fenced && n === first;
+            const closing = closed && n === last;
+            const classes = ["cm-lp-codeline"];
+            if (opening) classes.push("cm-lp-open");
+            if (closing) classes.push("cm-lp-close");
+            if (!fenced && n === first) classes.push("cm-lp-open", "cm-lp-indented");
+            if (!fenced && n === last) classes.push("cm-lp-close");
+            if ((opening || closing) && !editing) {
+              const info = opening ? node.getChild("CodeInfo") : null;
               const label = info ? doc.sliceString(info.from, info.to) : "";
-              out.push(
-                n === first && label
-                  ? Decoration.replace({ widget: new LabelWidget(label) }).range(ln.from, ln.to)
-                  : hide.range(ln.from, ln.to),
-              );
+              if (!label) classes.push("cm-lp-collapsed");
+              if (ln.to > ln.from) {
+                out.push(
+                  label
+                    ? Decoration.replace({ widget: new LabelWidget(label) }).range(ln.from, ln.to)
+                    : hide.range(ln.from, ln.to),
+                );
+              }
             }
+            out.push(line(classes.join(" ")).range(ln.from));
           }
           return false;
         }

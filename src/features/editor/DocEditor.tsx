@@ -11,27 +11,121 @@ import {
   markdown,
   markdownLanguage,
 } from "@codemirror/lang-markdown";
-import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
+import { HighlightStyle, syntaxHighlighting, syntaxTree } from "@codemirror/language";
 import { languages } from "@codemirror/language-data";
 import { search, searchKeymap } from "@codemirror/search";
 import { EditorSelection, EditorState } from "@codemirror/state";
 import { drawSelection, EditorView, keymap, placeholder as placeholderExt } from "@codemirror/view";
+import type { SyntaxNode } from "@lezer/common";
 import { tags as t } from "@lezer/highlight";
 import { useEffect, useRef } from "react";
 import { storeImage } from "../../data/assets";
 import { toast } from "../../ui/toast";
 import { livePreview } from "./livePreview";
 
-/** Colours for code inside fenced blocks; prose styling comes from live preview. */
+/**
+ * Colours for code inside fenced blocks, from the brand signal colours.
+ * Prose styling comes from live preview.
+ */
 const codeColours = HighlightStyle.define([
-  { tag: [t.keyword, t.controlKeyword, t.operatorKeyword], color: "rgb(var(--brand-signal-warn))" },
-  { tag: [t.string, t.attributeName, t.special(t.string)], color: "var(--color-accent)" },
-  { tag: [t.number, t.bool, t.null, t.atom], color: "rgb(var(--brand-signal-drop))" },
-  { tag: [t.comment, t.meta], color: "var(--color-ink-faint)", fontStyle: "italic" },
-  { tag: [t.function(t.variableName), t.typeName, t.className, t.tagName], fontWeight: "600" },
+  {
+    tag: [t.keyword, t.controlKeyword, t.operatorKeyword, t.definitionKeyword, t.moduleKeyword],
+    color: "rgb(var(--brand-signal-warn))",
+  },
+  {
+    tag: [t.string, t.special(t.string), t.regexp, t.escape],
+    color: "rgb(var(--brand-signal-add))",
+  },
+  { tag: [t.number, t.bool, t.null, t.atom, t.unit], color: "rgb(var(--brand-signal-drop))" },
+  {
+    tag: [t.propertyName, t.attributeName, t.labelName, t.tagName, t.url],
+    color: "var(--color-accent)",
+  },
+  {
+    tag: [t.function(t.variableName), t.function(t.propertyName), t.typeName, t.className],
+    color: "var(--color-ink)",
+    fontWeight: "600",
+  },
+  { tag: [t.definition(t.variableName), t.variableName], color: "var(--color-ink)" },
+  {
+    tag: [t.comment, t.lineComment, t.blockComment, t.meta],
+    color: "var(--color-ink-faint)",
+    fontStyle: "italic",
+  },
+  { tag: [t.operator, t.punctuation, t.bracket, t.separator], color: "var(--color-ink-muted)" },
   { tag: [t.processingInstruction, t.contentSeparator], color: "var(--color-ink-faint)" },
-  { tag: [t.url], color: "var(--color-accent)" },
+  { tag: [t.heading], fontWeight: "650" },
 ]);
+
+/** The pattern of a line that opens or closes a backtick fence. */
+const FENCE = /^ {0,3}```/;
+
+function fencedCodeAt(state: EditorState, pos: number) {
+  for (
+    let node: SyntaxNode | null = syntaxTree(state).resolveInner(pos, -1);
+    node;
+    node = node.parent
+  ) {
+    if (node.name === "FencedCode") return node;
+  }
+  return null;
+}
+
+/**
+ * Typing the third backtick of a fence closes the block straight away, so the
+ * rest of the document does not turn into code while you write. Typing the
+ * closing fence yourself on the line above the automatic one steps over it.
+ */
+const autoCloseFence = EditorView.inputHandler.of((view, from, to, text) => {
+  if (text !== "`" || from !== to) return false;
+  const { state } = view;
+  const ln = state.doc.lineAt(from);
+  const before = state.sliceDoc(ln.from, from);
+  if (!/^ {0,3}``$/.test(before) || state.sliceDoc(from, ln.to).trim()) return false;
+  const block = fencedCodeAt(state, from);
+  if (block) {
+    const next = ln.number < state.doc.lines ? state.doc.line(ln.number + 1) : null;
+    if (!next || !/^ {0,3}```\s*$/.test(next.text) || next.to !== block.to) return false;
+    const removeFrom = Math.max(0, ln.from - 1);
+    view.dispatch({
+      changes: { from: removeFrom, to: ln.to },
+      selection: { anchor: next.to - (ln.to - removeFrom) },
+      userEvent: "input.type",
+    });
+    return true;
+  }
+  const indent = before.slice(0, -2);
+  view.dispatch({
+    changes: { from, insert: `\`\n${indent}\`\`\`` },
+    selection: { anchor: from + 1 },
+    userEvent: "input.type",
+  });
+  return true;
+});
+
+/** Enter on an opening fence with no closing one adds it, as typing the fence would. */
+const closeFenceOnEnter: Command = (view) => {
+  const { state } = view;
+  const sel = state.selection.main;
+  if (!sel.empty) return false;
+  const ln = state.doc.lineAt(sel.head);
+  if (sel.head !== ln.to || !FENCE.test(ln.text) || !/^ {0,3}```[\w+#.-]*\s*$/.test(ln.text)) {
+    return false;
+  }
+  const block = fencedCodeAt(state, ln.to);
+  if (!block || state.doc.lineAt(block.from).number !== ln.number) return false;
+  const closer = block.lastChild;
+  const closed = closer?.name === "CodeMark" && closer.from > ln.to;
+  if (closed) return false;
+  const indent = /^ */.exec(ln.text)?.[0] ?? "";
+  view.dispatch({
+    changes: { from: ln.to, insert: `\n${indent}\n${indent}\`\`\`` },
+    selection: { anchor: ln.to + 1 + indent.length },
+    scrollIntoView: true,
+    userEvent: "input",
+  });
+  return true;
+};
 
 type Command = (view: EditorView) => boolean;
 
@@ -122,6 +216,12 @@ const BLOCKS: Block[] = [
   { label: "Heading", detail: "##", insert: "## " },
   { label: "Subheading", detail: "###", insert: "### " },
   { label: "HTTP request", detail: "```http", insert: "```http\n\n```", cursor: 8 },
+  {
+    label: "Request and response",
+    detail: "two blocks",
+    insert: "```http\nGET / HTTP/1.1\nHost: \n```\n\n```http\nHTTP/1.1 200 OK\n\n```",
+    cursor: 29,
+  },
   { label: "Code block", detail: "```", insert: "```\n\n```", cursor: 4 },
   { label: "Numbered list", detail: "1.", insert: "1. " },
   { label: "Bulleted list", detail: "-", insert: "- " },
@@ -172,6 +272,12 @@ function slashMenu(onImage: () => void) {
   };
 }
 
+/** Lets the page around the editor add to the document. */
+export interface DocController {
+  /** Appends a `## title` section and puts the cursor under it. */
+  addSection: (title: string) => void;
+}
+
 export function DocEditor({
   value,
   onChange,
@@ -179,6 +285,7 @@ export function DocEditor({
   placeholder,
   label,
   autoFocus,
+  controller,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -186,6 +293,7 @@ export function DocEditor({
   placeholder?: string;
   label: string;
   autoFocus?: boolean;
+  controller?: React.RefObject<DocController | null>;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
@@ -207,6 +315,7 @@ export function DocEditor({
           markdown({ base: markdownLanguage, codeLanguages: languages, addKeymap: false }),
           syntaxHighlighting(codeColours),
           livePreview(),
+          autoCloseFence,
           search({ top: true }),
           autocompletion({
             override: [slashMenu(() => fileInput.current?.click())],
@@ -222,6 +331,7 @@ export function DocEditor({
           }),
           keymap.of([
             // Enter on an empty list item ends the list, as in Obsidian.
+            { key: "Enter", run: closeFenceOnEnter },
             { key: "Enter", run: insertNewlineContinueMarkupCommand({ nonTightLists: false }) },
             { key: "Backspace", run: deleteMarkupBackward },
             { key: "Mod-b", run: wrap("**") },
@@ -258,10 +368,33 @@ export function DocEditor({
       }),
     });
     view.current = v;
+    if (controller) {
+      controller.current = {
+        addSection(title) {
+          const text = v.state.doc.toString();
+          const end = text.length;
+          const sep = !text.trim()
+            ? ""
+            : text.endsWith("\n\n")
+              ? ""
+              : text.endsWith("\n")
+                ? "\n"
+                : "\n\n";
+          const insert = `${sep}## ${title}\n\n`;
+          v.dispatch({
+            changes: { from: end, insert },
+            selection: { anchor: end + insert.length },
+            scrollIntoView: true,
+          });
+          v.focus();
+        },
+      };
+    }
     if (autoFocus) v.focus();
     return () => {
       v.destroy();
       view.current = null;
+      if (controller) controller.current = null;
     };
   }, [projectId]);
 
