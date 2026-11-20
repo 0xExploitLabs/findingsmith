@@ -1,7 +1,7 @@
 # Debrief, by 0xExploitLabs
 
 Debrief is a penetration test report writer that runs entirely in your browser.
-You write each finding as one Markdown document, score it with CVSS 3.1 or 4.0, paste in screenshots, and download a typeset PDF.
+You write each finding as one Markdown document, paste in its CVSS vector and screenshots, and download a typeset PDF.
 There is no account and no server: projects are stored in your browser's IndexedDB and never leave your device.
 
 ## What it does
@@ -9,10 +9,17 @@ There is no account and no server: projects are stored in your browser's Indexed
 - **Writing like a notes app.**
   Each finding and the report's own text are single Markdown documents with live preview, in the manner of Obsidian.
   Markup is hidden and rendered in place, and shows again on the line you are editing.
-  Type `/` on an empty line for headings, HTTP requests, code blocks, tables, checklists and images.
+  Type `/` on an empty line for headings, HTTP requests, request and response pairs, code blocks, tables, checklists and images.
+  Code fences close themselves as you type them, and code is highlighted by language.
+- **Properties when you need them.**
+  Every finding has a severity, a status and a CVSS field.
+  Endpoint and method, parameter, host, port, affected assets, CWE and CVE are added from the "Add property" picker, so a finding only shows what applies to it.
+  Usual sections such as Impact or Remediation are one click away under the write-up.
+- **Find anything.**
+  Press Ctrl+P (Cmd+P on macOS) to jump to a finding or run a command.
 - **Severity you can defend.**
-  When a finding has a CVSS vector, its severity is derived from the score using the rating scale in the CVSS specification, so a 5.3 is always Medium.
-  To rate a finding differently, you override it with a written reason, and the report prints both ratings and the reason.
+  Paste a CVSS 3.1 or 4.0 vector, or a bare base score from another tool, and the severity is derived from it using the rating scale in the CVSS specification, so a 5.3 is always Medium.
+  To rate a finding differently, pick another severity and give a reason; the report prints both ratings and the reason.
 - **A report, not a printout.**
   The PDF is laid out with a cover, contents with page numbers and links, an executive summary with a risk overview, a findings table, one section per finding and a severity appendix.
   Markdown is rendered, never printed raw.
@@ -31,7 +38,7 @@ A section whose title contains "summary" opens the report together with the risk
 
 A finding document works the same way.
 Its `##` sections, typically Description, Impact, Steps to reproduce, Remediation and References, appear in the report in the order you write them.
-Sections left empty are skipped.
+Sections left empty are skipped, and so are list items left blank.
 
 ## Severity rules
 
