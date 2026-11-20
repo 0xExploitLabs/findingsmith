@@ -1,0 +1,3 @@
+patchedDependencies:
+  '@react-pdf/layout@5.2.0': patches/@react-pdf__layout@5.2.0.patch
+  '@react-pdf/textkit@7.0.1': patches/@react-pdf__textkit@7.0.1.patch

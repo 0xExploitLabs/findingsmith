@@ -1,0 +1,15 @@
+diff --git a/lib/textkit.js b/lib/textkit.js
+index 7bfe0d9a119a8bd1ec98ff0f4827bd6cb3a967a4..9f9690375f766bbaf62bdd956924d87f5b5949a1 100644
+--- a/lib/textkit.js
++++ b/lib/textkit.js
+@@ -2677,7 +2677,9 @@ const breakLines = (attributedString, nodes, breaks) => {
+             // @ts-expect-error penalty node will always preceed box or glue node
+             end = prevNode.end;
+             line = slice(start, end, attributedString);
+-            line = insertGlyph(line.string.length, HYPHEN, line);
++            // Debrief: breaks inside a word only ever come from Debrief's hyphenation
++            // callback, which splits long tokens (URLs, hashes, CVSS vectors) and never
++            // natural words. A hyphen glyph there would read as part of the token.
+         }
+         else {
+             end = node.end;

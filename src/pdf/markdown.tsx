@@ -1,0 +1,442 @@
+import { Image, Link, Text, View } from "@react-pdf/renderer";
+import type { RootContent as HastContent, Element as HastElement } from "hast";
+import type {
+  Code,
+  List,
+  ListItem,
+  PhrasingContent,
+  Root,
+  RootContent,
+  Table,
+  TableCell,
+} from "mdast";
+import type { ReactNode } from "react";
+import { canHighlight, lowlight } from "../markdown/highlight";
+import { parseMarkdown } from "../markdown/parse";
+import { htmlAsText } from "../markdown/text";
+import { CODE_BG, FAINT, INK, MONO, MUTED, RULE, SANS, SYNTAX, WASH } from "./theme";
+
+export interface PdfImage {
+  src: string;
+  width: number;
+  height: number;
+}
+
+export interface MdContext {
+  accent: string;
+  images: Map<string, PdfImage>;
+  /** Width of the text column in points, used to size screenshots. */
+  columnWidth: number;
+}
+
+const BODY = { fontFamily: SANS, fontSize: 9.6, lineHeight: 1.55, color: INK };
+
+/** Renders Markdown as typeset PDF content. Raw Markdown syntax never reaches the page. */
+export function MarkdownPdf({ source, ctx }: { source: string; ctx: MdContext }) {
+  const tree: Root = parseMarkdown(source);
+  return <View>{blocks(tree.children, ctx, "r")}</View>;
+}
+
+function blocks(nodes: RootContent[], ctx: MdContext, key: string): ReactNode[] {
+  return nodes.map((node, i) => block(node, ctx, `${key}.${i}`, i === 0));
+}
+
+function block(node: RootContent, ctx: MdContext, key: string, first: boolean): ReactNode {
+  const top = first ? 0 : 7;
+  switch (node.type) {
+    case "paragraph":
+      return paragraph(node.children, ctx, key, top);
+    case "heading": {
+      const size = [14, 12.5, 11, 10, 9.6, 9.6][node.depth - 1] ?? 10;
+      return (
+        <Text
+          key={key}
+          minPresenceAhead={40}
+          style={{
+            ...BODY,
+            fontSize: size,
+            fontWeight: 700,
+            lineHeight: 1.3,
+            marginTop: first ? 0 : 12,
+            marginBottom: 2,
+          }}
+        >
+          {inlines(node.children, ctx, key)}
+        </Text>
+      );
+    }
+    case "list":
+      return list(node, ctx, key, top);
+    case "code":
+      return codeBlock(node, key, top);
+    case "blockquote":
+      return (
+        <View
+          key={key}
+          style={{
+            marginTop: top,
+            borderLeftWidth: 2.5,
+            borderLeftColor: ctx.accent,
+            backgroundColor: WASH,
+            paddingVertical: 6,
+            paddingHorizontal: 10,
+          }}
+        >
+          {blocks(node.children, ctx, key)}
+        </View>
+      );
+    case "table":
+      return table(node, ctx, key, top);
+    case "thematicBreak":
+      return (
+        <View
+          key={key}
+          style={{ marginVertical: 10, borderBottomWidth: 0.75, borderBottomColor: RULE }}
+        />
+      );
+    case "html":
+      return htmlAsText(node.value) ? (
+        <Text key={key} style={{ ...BODY, marginTop: top }}>
+          {htmlAsText(node.value)}
+        </Text>
+      ) : null;
+    case "footnoteDefinition":
+      return (
+        <View key={key} style={{ flexDirection: "row", marginTop: top }}>
+          <Text style={{ ...BODY, fontSize: 8, color: MUTED, width: 16 }}>{node.label}.</Text>
+          <View style={{ flex: 1 }}>{blocks(node.children, ctx, key)}</View>
+        </View>
+      );
+    default:
+      return null;
+  }
+}
+
+/** A paragraph may hold screenshots, which PDF text cannot contain inline, so it is split around them. */
+function paragraph(children: PhrasingContent[], ctx: MdContext, key: string, top: number) {
+  const runs: ReactNode[] = [];
+  let buffer: PhrasingContent[] = [];
+  const flush = () => {
+    if (buffer.length === 0) return;
+    const onlyWhitespace = buffer.every(
+      (n) => (n.type === "text" && !n.value.trim()) || n.type === "break",
+    );
+    if (!onlyWhitespace) {
+      runs.push(
+        <Text key={`${key}.t${runs.length}`} style={BODY}>
+          {inlines(buffer, ctx, `${key}.t${runs.length}`)}
+        </Text>,
+      );
+    }
+    buffer = [];
+  };
+  for (const child of children) {
+    if (child.type === "image") {
+      flush();
+      runs.push(image(child.url, child.alt ?? "", ctx, `${key}.i${runs.length}`));
+    } else {
+      buffer.push(child);
+    }
+  }
+  flush();
+  return (
+    <View key={key} style={{ marginTop: top }}>
+      {runs}
+    </View>
+  );
+}
+
+function image(url: string, alt: string, ctx: MdContext, key: string): ReactNode {
+  const img = url.startsWith("asset:") ? ctx.images.get(url.slice(6)) : undefined;
+  if (!img) {
+    return (
+      <Text key={key} style={{ ...BODY, color: FAINT, fontStyle: "italic" }}>
+        [Image not available{alt ? `: ${alt}` : ""}]
+      </Text>
+    );
+  }
+  // Points at 144 dpi keep retina screenshots sharp without blowing past the column.
+  const natural = img.width * 0.5;
+  const width = Math.min(ctx.columnWidth, natural);
+  const height = Math.min(520, (width / img.width) * img.height);
+  const finalWidth = (height / img.height) * img.width;
+  return (
+    <View key={key} wrap={false} style={{ marginVertical: 6 }}>
+      <View
+        style={{
+          borderWidth: 0.75,
+          borderColor: RULE,
+          borderRadius: 3,
+          padding: 3,
+          alignSelf: "flex-start",
+        }}
+      >
+        <Image src={img.src} style={{ width: finalWidth, height }} />
+      </View>
+      {alt ? <Text style={{ ...BODY, fontSize: 8, color: MUTED, marginTop: 4 }}>{alt}</Text> : null}
+    </View>
+  );
+}
+
+function inlines(nodes: PhrasingContent[], ctx: MdContext, key: string): ReactNode[] {
+  return nodes.map((n, i) => inline(n, ctx, `${key}.${i}`));
+}
+
+function inline(node: PhrasingContent, ctx: MdContext, key: string): ReactNode {
+  switch (node.type) {
+    case "text":
+      return node.value;
+    case "strong":
+      return (
+        <Text key={key} style={{ fontWeight: 700 }}>
+          {inlines(node.children, ctx, key)}
+        </Text>
+      );
+    case "emphasis":
+      return (
+        <Text key={key} style={{ fontStyle: "italic", color: MUTED }}>
+          {inlines(node.children, ctx, key)}
+        </Text>
+      );
+    case "delete":
+      return (
+        <Text key={key} style={{ textDecoration: "line-through", color: MUTED }}>
+          {inlines(node.children, ctx, key)}
+        </Text>
+      );
+    case "inlineCode":
+      return (
+        <Text
+          key={key}
+          style={{ fontFamily: MONO, fontSize: 8.4, backgroundColor: CODE_BG, color: INK }}
+        >
+          {` ${node.value} `}
+        </Text>
+      );
+    case "link":
+      return (
+        <Link
+          key={key}
+          src={node.url}
+          style={{
+            color: ctx.accent,
+            textDecoration: "underline",
+            textDecorationColor: ctx.accent,
+          }}
+        >
+          {inlines(node.children, ctx, key)}
+        </Link>
+      );
+    case "break":
+      return "\n";
+    case "html":
+      return htmlAsText(node.value);
+    case "image":
+      return `[${node.alt || "image"}]`;
+    case "footnoteReference":
+      return (
+        <Text key={key} style={{ fontSize: 7, color: ctx.accent }}>
+          [{node.label}]
+        </Text>
+      );
+    default:
+      return null;
+  }
+}
+
+function list(node: List, ctx: MdContext, key: string, top: number): ReactNode {
+  const start = node.start ?? 1;
+  return (
+    <View key={key} style={{ marginTop: top }}>
+      {node.children.map((item: ListItem, i) => {
+        const marker = node.ordered ? `${start + i}.` : "•";
+        return (
+          <View
+            key={`${key}.${i}`}
+            style={{ flexDirection: "row", marginTop: i === 0 ? 0 : 3 }}
+            wrap={item.children.length > 1}
+          >
+            {item.checked === null || item.checked === undefined ? (
+              <Text
+                style={{
+                  ...BODY,
+                  width: node.ordered ? 16 : 11,
+                  color: node.ordered ? MUTED : ctx.accent,
+                  fontWeight: node.ordered ? 600 : 700,
+                }}
+              >
+                {marker}
+              </Text>
+            ) : (
+              <View style={{ width: 14, paddingTop: 3 }}>
+                <View
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderWidth: 0.9,
+                    borderColor: item.checked ? ctx.accent : FAINT,
+                    backgroundColor: item.checked ? ctx.accent : "#FFFFFF",
+                    borderRadius: 1.5,
+                  }}
+                />
+              </View>
+            )}
+            <View style={{ flex: 1 }}>{blocks(item.children, ctx, `${key}.${i}`)}</View>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+function table(node: Table, ctx: MdContext, key: string, top: number): ReactNode {
+  const align = node.align ?? [];
+  return (
+    <View
+      key={key}
+      style={{ marginTop: top, borderWidth: 0.75, borderColor: RULE, borderRadius: 2 }}
+    >
+      {node.children.map((row, r) => (
+        <View
+          key={`${key}.${r}`}
+          wrap={false}
+          style={{
+            flexDirection: "row",
+            backgroundColor: r === 0 ? WASH : r % 2 === 0 ? "#FAFCFC" : "#FFFFFF",
+            borderTopWidth: r === 0 ? 0 : 0.75,
+            borderTopColor: RULE,
+          }}
+        >
+          {row.children.map((cell: TableCell, c) => (
+            <View
+              key={`${key}.${r}.${c}`}
+              style={{
+                flex: 1,
+                paddingVertical: 4,
+                paddingHorizontal: 6,
+                borderLeftWidth: c === 0 ? 0 : 0.75,
+                borderLeftColor: RULE,
+              }}
+            >
+              <Text
+                style={{
+                  ...BODY,
+                  fontSize: 8.6,
+                  fontWeight: r === 0 ? 700 : 400,
+                  textAlign: align[c] ?? "left",
+                }}
+              >
+                {inlines(cell.children, ctx, `${key}.${r}.${c}`)}
+              </Text>
+            </View>
+          ))}
+        </View>
+      ))}
+    </View>
+  );
+}
+
+interface Run {
+  text: string;
+  color: string;
+  bold?: boolean;
+  italic?: boolean;
+}
+
+function syntaxColor(classes: string[]): Partial<Run> | null {
+  for (const cls of classes) {
+    const name = cls.replace(/^hljs-/, "");
+    if (["keyword", "selector-tag", "built_in", "section", "meta-keyword"].includes(name))
+      return { color: SYNTAX.keyword };
+    if (["string", "attr", "attribute", "template-variable", "regexp"].includes(name))
+      return { color: SYNTAX.string };
+    if (["number", "literal", "symbol"].includes(name)) return { color: SYNTAX.number };
+    if (["title", "name", "type", "variable"].includes(name))
+      return { color: SYNTAX.title, bold: true };
+    if (["comment", "meta", "quote"].includes(name)) return { color: SYNTAX.comment, italic: true };
+    if (name === "addition") return { color: SYNTAX.addition };
+    if (name === "deletion") return { color: SYNTAX.deletion };
+  }
+  return null;
+}
+
+function flatten(nodes: HastContent[], inherited: Run, out: Run[]): void {
+  for (const node of nodes) {
+    if (node.type === "text") out.push({ ...inherited, text: node.value });
+    else if (node.type === "element") {
+      const el = node as HastElement;
+      const style = syntaxColor((el.properties.className as string[] | undefined) ?? []);
+      flatten(el.children, { ...inherited, ...style }, out);
+    }
+  }
+}
+
+function codeBlock(node: Code, key: string, top: number): ReactNode {
+  const value = node.value.replace(/\t/g, "    ");
+  const runs: Run[] = [];
+  const base: Run = { text: "", color: INK };
+  if (canHighlight(node.lang)) {
+    flatten(lowlight.highlight(node.lang, value).children as HastContent[], base, runs);
+  } else {
+    runs.push({ ...base, text: value });
+  }
+  // Split the runs into lines so a long block can break across pages between lines.
+  const lines: Run[][] = [[]];
+  for (const run of runs) {
+    const parts = run.text.split("\n");
+    parts.forEach((part, i) => {
+      if (i > 0) lines.push([]);
+      if (part) lines[lines.length - 1]?.push({ ...run, text: part });
+    });
+  }
+  return (
+    <View
+      key={key}
+      // Short blocks move whole to the next page; long ones break between lines.
+      wrap={lines.length > 16}
+      minPresenceAhead={40}
+      style={{
+        marginTop: top,
+        backgroundColor: CODE_BG,
+        borderWidth: 0.75,
+        borderColor: RULE,
+        borderRadius: 3,
+        paddingVertical: 7,
+        paddingHorizontal: 9,
+      }}
+    >
+      {node.lang ? (
+        <Text
+          style={{
+            fontFamily: SANS,
+            fontSize: 6.6,
+            color: FAINT,
+            letterSpacing: 0.8,
+            textTransform: "uppercase",
+            marginBottom: 3,
+          }}
+        >
+          {node.lang}
+        </Text>
+      ) : null}
+      {lines.map((line, i) => (
+        <Text key={i} style={{ fontFamily: MONO, fontSize: 7.6, lineHeight: 1.5, color: INK }}>
+          {line.length === 0
+            ? " "
+            : line.map((run, j) => (
+                <Text
+                  key={j}
+                  style={{
+                    color: run.color,
+                    fontWeight: run.bold ? 700 : 400,
+                    fontStyle: run.italic ? "italic" : "normal",
+                  }}
+                >
+                  {run.text}
+                </Text>
+              ))}
+        </Text>
+      ))}
+    </View>
+  );
+}

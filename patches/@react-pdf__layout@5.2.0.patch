@@ -1,0 +1,14 @@
+diff --git a/lib/index.js b/lib/index.js
+index 18c2618f4630b3c1296c8c3cac317b8d7666bbe8..8c0883b4cab7c3691c4281df084b711b4d9b6cbb 100644
+--- a/lib/index.js
++++ b/lib/index.js
+@@ -909,7 +909,8 @@ const fetchImage = async (node, pageWidth) => {
+             throw new Error(`Image's "src" or "source" prop returned ${source}`);
+         }
+         node.image = await resolveImage(source, { cache });
+-        if (Buffer.isBuffer(source) || source instanceof Blob)
++        // Debrief: the browser build has no global Buffer; guard it so the cache key is set.
++        if ((typeof Buffer !== 'undefined' && Buffer.isBuffer(source)) || source instanceof Blob)
+             return;
+         node.image.key = 'data' in source ? source.data.toString() : source.uri;
+     }
