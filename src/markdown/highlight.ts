@@ -17,3 +17,31 @@ lowlight.registerAlias({
 export function canHighlight(lang: string | null | undefined): lang is string {
   return !!lang && lowlight.registered(lang);
 }
+
+/** Languages a pentest report's unlabelled code is most likely to be in. */
+const GUESSABLE = [
+  "http",
+  "json",
+  "bash",
+  "shell",
+  "xml",
+  "javascript",
+  "python",
+  "sql",
+  "powershell",
+  "yaml",
+];
+
+/**
+ * Highlights a code block. A block without a language is highlighted only when
+ * one of the common report languages clearly fits, so plain output stays plain.
+ */
+export function highlightCode(code: string, lang: string | null | undefined) {
+  if (canHighlight(lang)) return lowlight.highlight(lang, code);
+  // An HTTP message is recognisable from its first line; auto-detection is weak at it.
+  if (/^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS) \S+ HTTP\/\d|^HTTP\/\d(\.\d)? \d{3}/.test(code)) {
+    return lowlight.highlight("http", code);
+  }
+  const guess = lowlight.highlightAuto(code, { subset: GUESSABLE });
+  return (guess.data?.relevance ?? 0) >= 8 ? guess : null;
+}

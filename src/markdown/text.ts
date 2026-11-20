@@ -13,7 +13,13 @@ export function htmlAsText(html: string): string {
     .trim();
 }
 
-/** True when a Markdown field has visible content once rendered. */
+/**
+ * True when Markdown has visible content once rendered. A list marker with
+ * nothing after it, such as the "1. " a template leaves, does not count.
+ */
 export function hasContent(markdown: string): boolean {
-  return markdown.replace(/<!--[\s\S]*?-->/g, "").trim().length > 0;
+  return markdown
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .split("\n")
+    .some((line) => line.trim() && !/^\s*([-*+]|\d+[.)])(\s+\[[ xX]\])?\s*$/.test(line));
 }

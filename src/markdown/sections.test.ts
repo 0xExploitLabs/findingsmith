@@ -24,3 +24,11 @@ describe("splitSections", () => {
     expect(splitSections("## **Bold** `title`\n\nx")[0]?.title).toBe("Bold title");
   });
 });
+
+describe("empty template content", () => {
+  it("a section holding only an empty list marker is empty", () => {
+    expect(splitSections("## Steps to reproduce\n\n1. \n\n## Impact\n\nReal.\n")).toEqual([
+      { title: "Impact", markdown: "Real." },
+    ]);
+  });
+});

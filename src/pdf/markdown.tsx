@@ -11,7 +11,7 @@ import type {
   TableCell,
 } from "mdast";
 import type { ReactNode } from "react";
-import { canHighlight, lowlight } from "../markdown/highlight";
+import { highlightCode } from "../markdown/highlight";
 import { parseMarkdown } from "../markdown/parse";
 import { htmlAsText } from "../markdown/text";
 import { CODE_BG, FAINT, INK, MONO, MUTED, RULE, SANS, SYNTAX, WASH } from "./theme";
@@ -246,9 +246,12 @@ function inline(node: PhrasingContent, ctx: MdContext, key: string): ReactNode {
 
 function list(node: List, ctx: MdContext, key: string, top: number): ReactNode {
   const start = node.start ?? 1;
+  // Items left empty while writing are not printed.
+  const items = node.children.filter((item) => item.children.length > 0);
+  if (items.length === 0) return null;
   return (
     <View key={key} style={{ marginTop: top }}>
-      {node.children.map((item: ListItem, i) => {
+      {items.map((item: ListItem, i) => {
         const marker = node.ordered ? `${start + i}.` : "•";
         return (
           <View
@@ -375,8 +378,9 @@ function codeBlock(node: Code, key: string, top: number): ReactNode {
   const value = node.value.replace(/\t/g, "    ");
   const runs: Run[] = [];
   const base: Run = { text: "", color: INK };
-  if (canHighlight(node.lang)) {
-    flatten(lowlight.highlight(node.lang, value).children as HastContent[], base, runs);
+  const tree = highlightCode(value, node.lang);
+  if (tree) {
+    flatten(tree.children as HastContent[], base, runs);
   } else {
     runs.push({ ...base, text: value });
   }
@@ -388,6 +392,14 @@ function codeBlock(node: Code, key: string, top: number): ReactNode {
       if (i > 0) lines.push([]);
       if (part) lines[lines.length - 1]?.push({ ...run, text: part });
     });
+  }
+  // The PDF layout collapses leading spaces, so indentation is kept with no-break spaces.
+  for (const line of lines) {
+    for (const run of line) {
+      const indent = /^ +/.exec(run.text)?.[0].length ?? 0;
+      run.text = "\u00a0".repeat(indent) + run.text.slice(indent);
+      if (run.text.trim()) break;
+    }
   }
   return (
     <View
