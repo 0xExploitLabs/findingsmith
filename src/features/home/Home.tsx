@@ -12,6 +12,7 @@ import { countSeverities, SeverityMix } from "../../ui/SeverityMix";
 import { ThemeToggle } from "../../ui/ThemeToggle";
 import { toast } from "../../ui/toast";
 import { Wordmark } from "../../ui/Wordmark";
+import { ReportPlate } from "./ReportPlate";
 
 interface Row {
   project: Project;
@@ -220,28 +221,7 @@ function Intro({ actions }: { actions: ReactNode }) {
           ))}
         </dl>
       </div>
-      <figure className="mx-auto w-full max-w-[540px]">
-        <div className="relative aspect-square">
-          <img
-            src="/home/report-finding.webp"
-            width={680}
-            height={962}
-            alt="A findings page: SQL injection, rated Critical with a CVSS 3.1 score of 9.8"
-            className="absolute left-0 top-0 w-[62%] rounded-[3px] shadow-page"
-          />
-          <img
-            src="/home/report-cover.webp"
-            width={680}
-            height={962}
-            alt="The cover of a penetration test report for Northwind Traders"
-            fetchPriority="high"
-            className="absolute right-0 top-[11%] w-[62%] rounded-[3px] shadow-page"
-          />
-        </div>
-        <figcaption className="mt-4 text-center text-[12.5px] text-ink-faint">
-          Two pages from a sample report, as Debrief renders them.
-        </figcaption>
-      </figure>
+      <ReportPlate />
     </section>
   );
 }
