@@ -20,7 +20,6 @@ function checks(project: Project, findings: Finding[], refs: Map<string, string>
   const list: Check[] = [];
   const projectLink = href({ name: "project", projectId: project.id, view: "overview" });
   const projectSections = splitSections(project.body);
-  list.push({ ok: !!project.client.trim(), label: "Client is set", link: projectLink });
   list.push({ ok: !!project.preparedBy.trim(), label: "“Prepared by” is set" });
   list.push({
     ok: !!findSection(projectSections, /summary/i),

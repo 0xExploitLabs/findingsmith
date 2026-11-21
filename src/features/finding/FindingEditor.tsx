@@ -34,6 +34,7 @@ import {
 } from "../../ui/primitives";
 import { AddSections, InlineText, Property, Title } from "../doc/DocParts";
 import { type DocController, DocEditor } from "../editor/DocEditor";
+import { CvssCalculator } from "./CvssCalculator";
 
 export const STATUS_DOT: Record<Finding["status"], string> = {
   Open: "bg-sev-high",
@@ -56,7 +57,10 @@ const METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"] as 
 
 type OptionalKey = "endpoint" | "parameter" | "host" | "port" | "affected" | "cwe" | "cve";
 
-/** Properties a finding can have, added from the picker when they apply. */
+/** The properties nearly every finding states; these rows are always there to fill. */
+const ALWAYS: OptionalKey[] = ["endpoint", "host", "cwe"];
+
+/** Properties a finding can have. The rest are added from the picker when they apply. */
 const OPTIONAL: { key: OptionalKey; label: string; icon: ReactNode; hint: string }[] = [
   {
     key: "endpoint",
@@ -97,9 +101,11 @@ export function FindingEditor({
   const [notesOpen, setNotesOpen] = useState(!!finding.notes.trim());
   const [override, setOverride] = useState<Severity | null>(null);
   const [shown, setShown] = useState<Set<OptionalKey>>(
-    () => new Set(OPTIONAL.filter((p) => hasValue(finding, p.key)).map((p) => p.key)),
+    () =>
+      new Set([...ALWAYS, ...OPTIONAL.filter((p) => hasValue(finding, p.key)).map((p) => p.key)]),
   );
   const [justAdded, setJustAdded] = useState<OptionalKey | null>(null);
+  const [calculating, setCalculating] = useState(false);
   const editor = useRef<DocController | null>(null);
   const rating = rate(finding);
   const cvssRead = finding.cvss.trim() ? readCvss(finding.cvss) : null;
@@ -124,6 +130,15 @@ export function FindingEditor({
 
   return (
     <div className="flex min-h-full">
+      <CvssCalculator
+        open={calculating}
+        vector={finding.cvss}
+        onClose={() => setCalculating(false)}
+        onUse={(cvss) => {
+          onChange({ cvss });
+          setCalculating(false);
+        }}
+      />
       <article className="mx-auto w-full min-w-0 max-w-[800px] px-6 pb-10 pt-10 sm:px-14">
         <div className="mb-4 flex items-center gap-2">
           <span
@@ -288,11 +303,26 @@ export function FindingEditor({
                   Not a valid vector or score
                 </span>
               ) : null}
+              <button
+                type="button"
+                onClick={() => setCalculating(true)}
+                className="h-7 shrink-0 rounded-md border border-line-strong px-2 text-[12.5px] text-ink-muted transition-colors duration-(--dur-micro) hover:border-line-hover hover:bg-hover hover:text-ink"
+              >
+                Calculate
+              </button>
             </div>
           </Property>
 
-          {OPTIONAL.filter((p) => shown.has(p.key)).map((p) => (
-            <Property key={p.key} icon={p.icon} label={p.label} onRemove={() => remove(p.key)}>
+          {[
+            ...OPTIONAL.filter((p) => ALWAYS.includes(p.key)),
+            ...OPTIONAL.filter((p) => !ALWAYS.includes(p.key) && shown.has(p.key)),
+          ].map((p) => (
+            <Property
+              key={p.key}
+              icon={p.icon}
+              label={p.label}
+              onRemove={ALWAYS.includes(p.key) ? undefined : () => remove(p.key)}
+            >
               {p.key === "endpoint" ? (
                 <div className="flex min-w-0 flex-1 items-center gap-1.5">
                   <Menu

@@ -4,11 +4,12 @@ import {
   Download,
   FileClock,
   MoreHorizontal,
+  Plus,
   Tag,
   Trash2,
   Users,
 } from "lucide-react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { download, exportProject, safeFilename } from "../../data/transfer";
 import type { Finding, Project } from "../../domain/types";
 import { cx, IconButton, Menu } from "../../ui/primitives";
@@ -16,6 +17,14 @@ import { countSeverities, SeverityMix } from "../../ui/SeverityMix";
 import { toast } from "../../ui/toast";
 import { AddSections, InlineText, Property, Title } from "../doc/DocParts";
 import { type DocController, DocEditor } from "../editor/DocEditor";
+
+type Extra = "client" | "assessors";
+
+/** Properties a report may state, added from the picker when it does. */
+const EXTRAS: { key: Extra; label: string; icon: React.ReactNode; hint: string }[] = [
+  { key: "client", label: "Client", icon: <Building2 />, hint: "Who the report is prepared for" },
+  { key: "assessors", label: "Assessors", icon: <Users />, hint: "Who carried out the testing" },
+];
 
 const PROJECT_SECTIONS = ["Executive summary", "Scope", "Methodology", "Limitations", "Conclusion"];
 
@@ -35,6 +44,13 @@ export function ProjectPage({
   onDelete: () => void;
 }) {
   const editor = useRef<DocController | null>(null);
+  // Client and assessors are stated by some reports and not others: their rows
+  // appear once they hold something, or when asked for.
+  const [shown, setShown] = useState<Set<Extra>>(
+    () => new Set(EXTRAS.filter((e) => project[e.key].trim()).map((e) => e.key)),
+  );
+  const [justAdded, setJustAdded] = useState<Extra | null>(null);
+  const hidden = EXTRAS.filter((e) => !shown.has(e.key));
   const counts = countSeverities(findings);
 
   return (
@@ -79,22 +95,6 @@ export function ProjectPage({
       />
 
       <dl className="mt-6">
-        <Property icon={<Building2 />} label="Client">
-          <InlineText
-            value={project.client}
-            onChange={(client) => onChange({ client })}
-            placeholder="Client name"
-            label="Client"
-          />
-        </Property>
-        <Property icon={<Users />} label="Assessors">
-          <InlineText
-            value={project.assessors}
-            onChange={(assessors) => onChange({ assessors })}
-            placeholder="Who tested"
-            label="Assessors"
-          />
-        </Property>
         <Property icon={<CalendarDays />} label="Testing">
           <div className="flex items-center gap-1 text-[13px] text-ink-faint">
             <DateField
@@ -130,7 +130,54 @@ export function ProjectPage({
             />
           </div>
         </Property>
+        {EXTRAS.filter((e) => shown.has(e.key)).map((e) => (
+          <Property
+            key={e.key}
+            icon={e.icon}
+            label={e.label}
+            onRemove={() => {
+              onChange({ [e.key]: "" });
+              setShown((prev) => {
+                const next = new Set(prev);
+                next.delete(e.key);
+                return next;
+              });
+            }}
+          >
+            <InlineText
+              value={project[e.key]}
+              onChange={(value) => onChange({ [e.key]: value })}
+              placeholder={e.hint}
+              label={e.label}
+              autoFocus={justAdded === e.key}
+            />
+          </Property>
+        ))}
       </dl>
+
+      {hidden.length > 0 ? (
+        <Menu
+          heading="Add property"
+          width={280}
+          items={hidden.map((e) => ({ value: e.key, label: e.label, hint: e.hint, icon: e.icon }))}
+          onSelect={(key) => {
+            setShown((prev) => new Set(prev).add(key));
+            setJustAdded(key);
+          }}
+          trigger={({ toggle, ref, open }) => (
+            <button
+              ref={ref}
+              type="button"
+              onClick={toggle}
+              aria-expanded={open}
+              className="mt-1 flex h-7 items-center gap-2 rounded-md px-1.5 text-[13px] text-ink-faint transition-colors hover:bg-hover hover:text-ink [&_svg]:size-[15px]"
+            >
+              <Plus />
+              Add property
+            </button>
+          )}
+        />
+      ) : null}
 
       <div className="mt-6 border-t border-line pt-7">
         <DocEditor
