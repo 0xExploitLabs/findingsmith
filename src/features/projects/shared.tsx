@@ -218,7 +218,7 @@ export function SiteShell({
           </div>
         </div>
         <Cicada
-          className="hatched mx-auto mt-14 block w-[min(1100px,92%)] translate-y-[18%] text-accent sm:mt-20"
+          className="hatched mx-auto mt-14 block w-[min(1100px,92%)] translate-y-[18%] text-field sm:mt-20"
           hatch
         />
       </footer>

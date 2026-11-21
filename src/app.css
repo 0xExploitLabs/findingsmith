@@ -55,6 +55,9 @@
   --brand-accent: 152 134 255;
   --brand-accent-deep: 132 112 248;
   --brand-glow: 152 134 255;
+  /* The colour field of the overview, and the ink that reads on it. */
+  --brand-field: 152 134 255;
+  --brand-on-field: 10 10 14;
   --brand-signal-add: 40 202 65;
   --brand-signal-warn: 255 189 46;
   --brand-signal-drop: 255 95 87;
@@ -70,16 +73,20 @@
 :root[data-scheme="light"] {
   --brand-bg: 248 248 250;
   --brand-surface-1: 255 255 255;
-  --brand-surface-2: 241 241 246;
-  --brand-surface-3: 228 228 237;
-  --brand-code: 240 240 246;
+  --brand-surface-2: 240 243 247;
+  --brand-surface-3: 226 231 238;
+  --brand-code: 239 242 247;
   --brand-ink: 10 10 14;
   --brand-ink-muted: 88 88 102;
   --brand-ink-inverse: 255 255 255;
-  --brand-shadow: 30 20 80;
-  --brand-accent: 91 61 245;
-  --brand-accent-deep: 70 42 214;
-  --brand-glow: 91 61 245;
+  --brand-shadow: 16 44 84;
+  /* Light is sky blue: a bright field, and a deeper step of it where the accent
+     carries text or sits under white text. */
+  --brand-accent: 0 122 214;
+  --brand-accent-deep: 0 100 180;
+  --brand-glow: 0 122 214;
+  --brand-field: 41 163 255;
+  --brand-on-field: 6 22 40;
   --brand-signal-add: 34 106 48;
   --brand-signal-warn: 140 82 0;
   --brand-signal-drop: 178 38 32;
@@ -105,6 +112,8 @@
   --color-accent: rgb(var(--brand-accent));
   --color-accent-deep: rgb(var(--brand-accent-deep));
   --color-glow: rgb(var(--brand-glow));
+  --color-field: rgb(var(--brand-field));
+  --color-on-field: rgb(var(--brand-on-field));
   --color-line: rgb(var(--brand-ink) / var(--line-alpha));
   --color-line-strong: rgb(var(--brand-ink) / calc(var(--line-alpha) * 1.8));
   --color-line-hover: rgb(var(--brand-ink) / 0.2);
@@ -943,7 +952,7 @@
   width: 0.42em;
   height: 0.42em;
   margin: -0.21em 0 0 -0.21em;
-  background: var(--color-accent);
+  background: var(--color-field);
   animation: word-block 0.72s var(--ease-out) calc(var(--i) * 70ms) both;
 }
 .swap-word > .text {
@@ -988,7 +997,7 @@
   position: absolute;
   width: 11px;
   height: 11px;
-  background: var(--color-accent);
+  background: var(--color-field);
   transform: scale(0);
   transition: transform var(--dur-short) var(--ease-in) calc((5 - var(--n)) * 18ms);
 }
@@ -1054,6 +1063,31 @@
   --brand-signal-drop: 178 38 31;
   --brand-signal-add: 34 106 48;
   color: var(--color-ink);
+}
+/* The hue slider of the report's colour picker: a rainbow track and a plain thumb. */
+.hue-slider {
+  appearance: none;
+  height: 12px;
+  border-radius: 999px;
+  background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+  cursor: pointer;
+}
+.hue-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid rgb(0 0 0 / 0.35);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+}
+.hue-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid rgb(0 0 0 / 0.35);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
 }
 .rise-late {
   animation: rise 0.7s var(--ease-out) var(--d, 0s) both;

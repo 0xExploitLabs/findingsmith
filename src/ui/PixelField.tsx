@@ -30,13 +30,11 @@ function noise(x: number, y: number, z: number): number {
 }
 
 const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
-const smooth = (a: number, b: number, x: number) => fade(clamp((x - a) / (b - a), 0, 1));
 
 /**
  * How strongly a cell is inked, 0 to about 1.4, before the noise is added.
  * The frame keeps a rounded clearing in its middle, sized in pixels so the
- * headline it surrounds stays readable at any width, and thins out along its
- * bottom edge so it dissolves into the page instead of ending in a line.
+ * headline it surrounds stays readable at any width.
  */
 function density(shape: FieldShape, u: number, v: number, width: number, height: number): number {
   if (shape === "fall") return (1 - v) ** 1.15;
@@ -47,7 +45,7 @@ function density(shape: FieldShape, u: number, v: number, width: number, height:
   const dy = Math.abs(v - 0.52) / (holeH / height / 2);
   const d = Math.cbrt(dx ** 3 + dy ** 3);
   // A narrow screen has few columns, so the edge ramps more gently and stays ragged.
-  return clamp((d - 0.86) * (width < 700 ? 1.25 : 1.9), 0, 1.4) * (1 - smooth(0.84, 1, v));
+  return clamp((d - 0.86) * (width < 700 ? 1.25 : 1.9), 0, 1.4);
 }
 
 /** How far the pointer's wake reaches, in screen pixels. */
@@ -81,7 +79,7 @@ export function PixelField({
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
     const rgb = getComputedStyle(canvas)
-      .getPropertyValue(tone === "accent" ? "--brand-accent" : "--brand-ink-inverse")
+      .getPropertyValue(tone === "accent" ? "--brand-field" : "--brand-ink-inverse")
       .trim()
       .split(/\s+/)
       .map(Number);
