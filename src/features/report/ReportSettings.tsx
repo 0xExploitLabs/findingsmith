@@ -126,7 +126,13 @@ function Logo({
         <button
           type="button"
           onClick={() => input.current?.click()}
-          className="flex h-12 flex-1 items-center justify-center overflow-hidden rounded-lg border border-dashed border-line-strong bg-white px-3 text-[12px] text-[#6b7c80] transition-colors hover:border-accent"
+          className={cx(
+            "flex h-12 flex-1 items-center justify-center overflow-hidden rounded-lg border px-3 text-[13px] transition-colors duration-(--dur-micro)",
+            url
+              ? "border-line-strong bg-sheet hover:border-line-hover"
+              : "border-dashed border-line-strong bg-surface-2 text-ink-muted hover:border-line-hover hover:text-ink",
+          )}
+          aria-label={url ? "Replace logo" : "Add logo"}
         >
           {url ? (
             <img src={url} alt="Report logo" className="max-h-9 max-w-full object-contain" />

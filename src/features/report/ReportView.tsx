@@ -213,10 +213,8 @@ export function ReportView({
           <h2 className="text-[13.5px] font-semibold">Checks</h2>
           <span
             className={cx(
-              "ml-auto rounded-md px-1.5 py-0.5 font-mono text-[11px]",
-              issues
-                ? "bg-[rgb(var(--brand-signal-warn)/0.14)] text-warn"
-                : "bg-[rgb(var(--brand-signal-add)/0.14)] text-ok",
+              "ml-auto rounded-md px-2 py-0.5 text-[12px] font-medium tabular-nums",
+              issues ? "bg-warn-soft text-warn" : "bg-ok-soft text-ok",
             )}
           >
             {issues ? `${issues} to review` : "Ready"}
