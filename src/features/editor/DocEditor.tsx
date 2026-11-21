@@ -206,70 +206,153 @@ async function insertImages(view: EditorView, projectId: string, files: File[], 
 
 interface Block {
   label: string;
+  /** The Markdown it stands for, shown at the right of the menu. */
   detail: string;
   insert: string;
   /** Cursor offset inside `insert`; the end when omitted. */
   cursor?: number;
+  /** Wraps the cursor inside a line instead of starting a block of its own. */
+  inline?: boolean;
+  icon: string;
 }
 
-const BLOCKS: Block[] = [
-  { label: "Heading", detail: "##", insert: "## " },
-  { label: "Subheading", detail: "###", insert: "### " },
-  { label: "HTTP request", detail: "```http", insert: "```http\n\n```", cursor: 8 },
+/* Icons for the slash menu, as the inside of a 24 by 24 stroked SVG. */
+const ICON = {
+  code: '<path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/>',
+  heading: '<path d="M6 12h12M6 20V4M18 20V4"/>',
+  rule: '<path d="M4 12h16"/>',
+  ordered: '<path d="M10 6h11M10 12h11M10 18h11M4 10V6H3M3 10h2M5 18H3c0-1 2-2 2-3s-1-1.5-2-1"/>',
+  bullets: '<path d="M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
+  checks: '<path d="m3 17 2 2 4-4M3 7l2 2 4-4M13 6h8M13 12h8M13 18h8"/>',
+  table: '<path d="M3 4h18v16H3zM3 10h18M3 15h18M10 4v16"/>',
+  quote: '<path d="M4 5v14M9 7h11M9 12h11M9 17h7"/>',
+  image:
+    '<rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/>',
+  bold: '<path d="M7 12h8a4 4 0 0 1 0 8H7zM7 4h7a4 4 0 0 1 0 8H7z"/>',
+  italic: '<path d="M19 4h-9M14 20H5M15 4 9 20"/>',
+  link: '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>',
+  request: '<path d="M3 7h13M12 3l4 4-4 4M21 17H8M12 13l-4 4 4 4"/>',
+};
+
+const FORMATTING: Block[] = [
+  { label: "Codeblock", detail: "```", insert: "```\n\n```", cursor: 4, icon: ICON.code },
+  { label: "Heading 1", detail: "#", insert: "# ", icon: ICON.heading },
+  { label: "Heading 2", detail: "##", insert: "## ", icon: ICON.heading },
+  { label: "Heading 3", detail: "###", insert: "### ", icon: ICON.heading },
+  { label: "Heading 4", detail: "####", insert: "#### ", icon: ICON.heading },
+  { label: "Horizontal rule", detail: "---", insert: "---\n", icon: ICON.rule },
+  { label: "Ordered list", detail: "1.", insert: "1. ", icon: ICON.ordered },
+  { label: "Bulleted list", detail: "-", insert: "- ", icon: ICON.bullets },
+  { label: "Task list", detail: "- [ ]", insert: "- [ ] ", icon: ICON.checks },
+  {
+    label: "Table",
+    detail: "| --- |",
+    insert: "| Column | Column |\n| --- | --- |\n|  |  |",
+    cursor: 36,
+    icon: ICON.table,
+  },
+  { label: "Quote", detail: ">", insert: "> ", icon: ICON.quote },
+  { label: "Bold", detail: "**", insert: "****", cursor: 2, inline: true, icon: ICON.bold },
+  { label: "Italic", detail: "_", insert: "__", cursor: 1, inline: true, icon: ICON.italic },
+  { label: "Inline code", detail: "`", insert: "``", cursor: 1, inline: true, icon: ICON.code },
+  {
+    label: "Link",
+    detail: "[ ]( )",
+    insert: "[](https://)",
+    cursor: 1,
+    inline: true,
+    icon: ICON.link,
+  },
+];
+
+const EVIDENCE: Block[] = [
+  {
+    label: "HTTP request",
+    detail: "```http",
+    insert: "```http\n\n```",
+    cursor: 8,
+    icon: ICON.request,
+  },
   {
     label: "Request and response",
     detail: "two blocks",
     insert: "```http\nGET / HTTP/1.1\nHost: \n```\n\n```http\nHTTP/1.1 200 OK\n\n```",
     cursor: 29,
+    icon: ICON.request,
   },
-  { label: "Code block", detail: "```", insert: "```\n\n```", cursor: 4 },
-  { label: "Numbered list", detail: "1.", insert: "1. " },
-  { label: "Bulleted list", detail: "-", insert: "- " },
-  { label: "Checklist", detail: "- [ ]", insert: "- [ ] " },
-  {
-    label: "Table",
-    detail: "| |",
-    insert: "| Column | Column |\n| --- | --- |\n|  |  |",
-    cursor: 36,
-  },
-  { label: "Quote", detail: ">", insert: "> " },
-  { label: "Divider", detail: "---", insert: "---\n" },
 ];
 
+const SECTIONS = [
+  { name: "Basic formatting", rank: 0 },
+  { name: "Evidence", rank: 1 },
+];
+
+/** The icon of a slash-menu entry, kept beside the completion it belongs to. */
+const icons = new WeakMap<Completion, string>();
+
+/**
+ * The menu behind "/": every block and inline format with its icon and the
+ * Markdown it stands for, filtered as you type. It opens at the start of a
+ * line or after a space, and never inside code.
+ */
 function slashMenu(onImage: () => void) {
   return (ctx: CompletionContext): CompletionResult | null => {
-    const word = ctx.matchBefore(/^\s*\/[\w ]*$/);
+    const word = ctx.matchBefore(/(?:^|\s)\/[\w ]*$/);
     if (!word) return null;
+    for (let node = syntaxTree(ctx.state).resolveInner(ctx.pos, -1); ; ) {
+      if (/Code/.test(node.name)) return null;
+      if (!node.parent) break;
+      node = node.parent;
+    }
     const slash = word.from + word.text.indexOf("/");
-    const options: Completion[] = [
-      ...BLOCKS.map(
-        (b, i): Completion => ({
-          label: b.label,
-          detail: b.detail,
-          type: "text",
-          // Keep the menu in this order instead of alphabetical.
-          boost: 50 - i,
-          apply: (view, _c, _from, to) => {
-            view.dispatch({
-              changes: { from: slash, to, insert: b.insert },
-              selection: { anchor: slash + (b.cursor ?? b.insert.length) },
-            });
-          },
-        }),
-      ),
-      {
-        label: "Image",
-        detail: "or paste",
-        type: "text",
-        boost: 50 - BLOCKS.length,
+    const line = ctx.state.doc.lineAt(slash);
+    const midLine = /\S/.test(line.text.slice(0, slash - line.from));
+    const entry = (b: Block, section: number, i: number): Completion => {
+      const completion: Completion = {
+        label: b.label,
+        detail: b.detail,
+        section: SECTIONS[section],
+        // Keep the menu in this order instead of alphabetical.
+        boost: 50 - i,
         apply: (view, _c, _from, to) => {
-          view.dispatch({ changes: { from: slash, to, insert: "" } });
-          onImage();
+          // A block asked for in the middle of a line starts on a line of its own.
+          const lead = midLine && !b.inline ? "\n" : "";
+          view.dispatch({
+            changes: { from: slash, to, insert: lead + b.insert },
+            selection: { anchor: slash + lead.length + (b.cursor ?? b.insert.length) },
+          });
         },
+      };
+      icons.set(completion, b.icon);
+      return completion;
+    };
+    const image: Completion = {
+      label: "Image",
+      detail: "or paste",
+      section: SECTIONS[1],
+      boost: 0,
+      apply: (view, _c, _from, to) => {
+        view.dispatch({ changes: { from: slash, to, insert: "" } });
+        onImage();
       },
+    };
+    icons.set(image, ICON.image);
+    const options = [
+      ...FORMATTING.map((b, i) => entry(b, 0, i)),
+      ...EVIDENCE.map((b, i) => entry(b, 1, FORMATTING.length + i)),
+      image,
     ];
     return { from: slash + 1, options, filter: true, validFor: /^[\w ]*$/ };
   };
+}
+
+/** Draws an entry's icon at the start of its row. */
+function renderIcon(completion: Completion): HTMLElement {
+  const box = document.createElement("span");
+  box.className = "cm-slash-icon";
+  box.setAttribute("aria-hidden", "true");
+  box.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icons.get(completion) ?? ""}</svg>`;
+  return box;
 }
 
 /** Lets the page around the editor add to the document. */
@@ -321,6 +404,8 @@ export function DocEditor({
             override: [slashMenu(() => fileInput.current?.click())],
             icons: false,
             closeOnBlur: true,
+            addToOptions: [{ render: renderIcon, position: 20 }],
+            maxRenderedOptions: 40,
           }),
           placeholderExt(placeholder ?? ""),
           EditorView.contentAttributes.of({

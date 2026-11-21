@@ -913,7 +913,44 @@
   background: var(--color-surface-3);
   color: var(--color-ink);
 }
+.doc-editor .cm-editor .cm-tooltip.cm-tooltip-autocomplete > ul > li {
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 6px 10px;
+}
+.doc-editor .cm-tooltip-autocomplete .cm-completionLabel {
+  flex: 1;
+}
+/* The group a run of entries belongs to, as in "Basic formatting". */
+.doc-editor .cm-tooltip-autocomplete completion-section {
+  display: block;
+  padding: 8px 10px 4px;
+  border-bottom: 0;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--color-ink-faint);
+}
+.doc-editor .cm-tooltip-autocomplete completion-section:not(:first-child) {
+  margin-top: 4px;
+  border-top: 1px solid var(--color-line);
+}
+.doc-editor .cm-slash-icon {
+  display: flex;
+  width: 16px;
+  height: 16px;
+  flex: none;
+  color: var(--color-ink-muted);
+}
+.doc-editor .cm-slash-icon svg {
+  width: 16px;
+  height: 16px;
+}
+.doc-editor li[aria-selected] .cm-slash-icon {
+  color: var(--color-accent);
+}
 .doc-editor .cm-tooltip-autocomplete .cm-completionDetail {
+  margin-left: auto;
   font-family: var(--font-mono);
   font-size: 11.5px;
   font-style: normal;
