@@ -659,9 +659,27 @@ test.describe("on a computer set to dark mode", () => {
     const sky = "rgb(41, 163, 255)";
     const violet = "rgb(152, 134, 255)";
 
+    const fetched = new Set<string>();
+    page.on("requestfinished", (request) => {
+      if (/favicon/.test(request.url())) fetched.add(new URL(request.url()).pathname);
+    });
+
     await page.goto("/");
     // The app opens light whatever the computer says, and so does its icon.
     await expect.poll(chrome).toEqual({ tiles: [sky, sky], bar: "#f8f8fa" });
+
+    // Every icon is read once, so a switch draws one already in memory: asking
+    // the server again took about a second on the live site.
+    await expect.poll(() => fetched.size).toBe(4);
+    let asked = 0;
+    page.on("request", (request) => {
+      if (/favicon/.test(request.url())) asked++;
+    });
+    await page.getByRole("button", { name: "Switch to dark theme" }).first().click();
+    await expect.poll(chrome).toEqual({ tiles: [violet, violet], bar: "#0c0c10" });
+    await page.getByRole("button", { name: "Switch to light theme" }).first().click();
+    await expect.poll(chrome).toEqual({ tiles: [sky, sky], bar: "#f8f8fa" });
+    expect(asked).toBe(0);
 
     await page.getByRole("button", { name: "Switch to dark theme" }).first().click();
     await expect.poll(chrome).toEqual({ tiles: [violet, violet], bar: "#0c0c10" });
