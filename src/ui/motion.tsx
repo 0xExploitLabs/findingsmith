@@ -172,11 +172,12 @@ export function useScrollProgress<T extends HTMLElement>(
 
 /**
  * A few pixels that grow into a corner of their card while it is hovered or
- * focused. The card needs the `group` class and to clip its overflow.
+ * focused: the top right one, or the bottom right. The card needs the `group`
+ * class and to clip its overflow.
  */
-export function PixelCorner() {
+export function PixelCorner({ corner = "tr" }: { corner?: "tr" | "br" }) {
   return (
-    <span aria-hidden="true" className="pixel-corner">
+    <span aria-hidden="true" className="pixel-corner" data-corner={corner}>
       {[0, 1, 2, 3, 4, 5].map((n) => (
         <i key={n} style={{ "--n": n } as CSSProperties} />
       ))}

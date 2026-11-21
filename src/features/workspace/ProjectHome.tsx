@@ -16,9 +16,10 @@ import { download, exportProject, safeFilename } from "../../data/transfer";
 import { findingGaps, listInWords } from "../../domain/completeness";
 import { formatScore, scoreVector } from "../../domain/cvss";
 import { compareFindings, rate } from "../../domain/severity";
-import type { Finding, Project } from "../../domain/types";
+import { type Finding, type Project, SEVERITIES } from "../../domain/types";
 import { href } from "../../state/router";
 import { PixelCorner } from "../../ui/motion";
+import { PixelField } from "../../ui/PixelField";
 import { MOD_KEY } from "../../ui/platform";
 import { Button, cx, IconButton, Kbd, Menu, SEVERITY_CLASS } from "../../ui/primitives";
 import { countSeverities, SeverityMix } from "../../ui/SeverityMix";
@@ -26,6 +27,7 @@ import { toast } from "../../ui/toast";
 import { Title } from "../doc/DocParts";
 import { STATUS_DOT } from "../finding/FindingEditor";
 import type { LibraryStart } from "../library/LibraryDialog";
+import { relative } from "../projects/shared";
 import { reportChecks } from "../report/checks";
 
 /** The findings most engagements open with, offered by name on an empty project. */
@@ -56,147 +58,190 @@ export function ProjectHome({
   onOpenLibrary: (start?: LibraryStart) => void;
 }) {
   const ordered = useMemo(() => [...findings].sort(compareFindings), [findings]);
+  const counts = useMemo(() => countSeverities(findings), [findings]);
   const checks = useMemo(() => reportChecks(project, findings, refs), [project, findings, refs]);
   const issues = checks.filter((c) => !c.ok).length;
   const summary = checks.find((c) => c.label.startsWith("Executive summary"))?.ok;
 
   return (
-    <article className="mx-auto w-full max-w-[920px] px-6 pb-16 pt-10 sm:px-10">
-      <div className="flex items-start gap-3">
-        <div className="min-w-0 flex-1">
-          <Title
-            value={project.name}
-            onChange={(name) => onChange({ name })}
-            placeholder="Untitled project"
+    <div className="relative min-h-full overflow-hidden">
+      {/* The overview's pixel field, still: it thins out behind the project's name. */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-[150px]">
+        <PixelField shape="fall" cell={18} still />
+      </div>
+      <article className="relative mx-auto w-full max-w-[920px] px-6 pb-16 pt-[118px] sm:px-10">
+        <div className="relative flex items-start gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="mb-1.5 text-[12.5px] text-ink-muted">
+              {[project.client, `Edited ${relative(project.updatedAt)}`]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+            <Title
+              value={project.name}
+              onChange={(name) => onChange({ name })}
+              placeholder="Untitled project"
+              display
+            />
+          </div>
+          <Menu
+            align="end"
+            width={230}
+            trigger={({ toggle, ref, open }) => (
+              <IconButton
+                ref={ref}
+                label="Project actions"
+                onClick={toggle}
+                aria-expanded={open}
+                className="mt-1"
+              >
+                <MoreHorizontal />
+              </IconButton>
+            )}
+            items={[
+              { value: "export", label: "Export project file", icon: <Download /> },
+              { value: "delete", label: "Delete project", icon: <Trash2 />, danger: true },
+            ]}
+            onSelect={async (v) => {
+              if (v === "delete") return onDelete();
+              download(await exportProject(project), `${safeFilename(project.name)}.debrief.json`);
+              toast("Project exported");
+            }}
           />
         </div>
-        <Menu
-          align="end"
-          width={230}
-          trigger={({ toggle, ref, open }) => (
-            <IconButton
-              ref={ref}
-              label="Project actions"
-              onClick={toggle}
-              aria-expanded={open}
-              className="mt-1"
-            >
-              <MoreHorizontal />
-            </IconButton>
-          )}
-          items={[
-            { value: "export", label: "Export project file", icon: <Download /> },
-            { value: "delete", label: "Delete project", icon: <Trash2 />, danger: true },
-          ]}
-          onSelect={async (v) => {
-            if (v === "delete") return onDelete();
-            download(await exportProject(project), `${safeFilename(project.name)}.debrief.json`);
-            toast("Project exported");
-          }}
-        />
-      </div>
 
-      {findings.length === 0 ? (
-        <FirstFinding onNewFinding={onNewFinding} onOpenLibrary={onOpenLibrary} />
-      ) : (
-        <section aria-labelledby="findings-title" className="mt-6">
-          <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
-            <div className="min-w-[14rem] flex-1">
-              <h2 id="findings-title" className="text-[13px] text-ink-faint">
-                {findings.length} finding{findings.length === 1 ? "" : "s"}
-              </h2>
-              <SeverityMix counts={countSeverities(findings)} className="mt-2 max-w-[420px]" />
-            </div>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="primary"
-                icon={<BookOpen />}
-                onClick={() => onOpenLibrary()}
-              >
-                Add from library
-              </Button>
-              <Button size="sm" icon={<FilePlus2 />} onClick={onNewFinding}>
-                Blank finding
-              </Button>
-            </div>
-          </div>
-          <ul className="mt-5 overflow-hidden rounded-2xl bg-surface-1">
-            {ordered.map((f) => {
-              const r = rate(f);
-              const gaps = findingGaps(f);
-              return (
-                <li key={f.id} className="border-b border-line last:border-b-0">
-                  <a
-                    href={href({ name: "finding", projectId: project.id, findingId: f.id })}
-                    className="flex items-center gap-4 px-4 py-3.5 transition-colors sm:px-5 duration-(--dur-micro) hover:bg-hover"
+        {findings.length === 0 ? (
+          <FirstFinding onNewFinding={onNewFinding} onOpenLibrary={onOpenLibrary} />
+        ) : (
+          <section aria-labelledby="findings-title" className="relative mt-7">
+            <ul className="grid grid-cols-5 gap-2 sm:gap-2.5" aria-label="Findings by severity">
+              {SEVERITIES.map((severity) => (
+                <li
+                  key={severity}
+                  className="rounded-2xl bg-surface-1 px-2.5 pb-3 pt-2.5 sm:px-4 sm:pb-3.5 sm:pt-3"
+                >
+                  <p
+                    className={cx(
+                      "font-display text-[34px] italic leading-none sm:text-[44px]",
+                      counts[severity] === 0 && "text-ink-faint",
+                    )}
                   >
-                    <span className="w-11 shrink-0 font-mono text-[12px] text-ink-faint max-sm:hidden">
-                      {refs.get(f.id)}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span
-                        className={cx(
-                          "line-clamp-2 text-[14px] font-medium leading-snug sm:line-clamp-1",
-                          !f.title && "text-ink-muted",
-                        )}
-                      >
-                        {f.title || "Untitled finding"}
+                    {counts[severity]}
+                  </p>
+                  <p className="mt-2 flex items-center gap-1.5 text-[11.5px] text-ink-muted sm:text-[12.5px]">
+                    <span
+                      className={cx(
+                        "size-[7px] shrink-0 rounded-[2px] max-sm:hidden",
+                        SEVERITY_CLASS[severity].dot,
+                        counts[severity] === 0 && "opacity-40",
+                      )}
+                    />
+                    <span className="truncate">{severity}</span>
+                  </p>
+                </li>
+              ))}
+            </ul>
+            <SeverityMix counts={counts} cells={48} labels={false} className="mt-3" />
+            <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3">
+              <h2
+                id="findings-title"
+                className="text-[13px] text-ink-faint max-sm:w-full sm:flex-1"
+              >
+                {findings.length} finding{findings.length === 1 ? "" : "s"}, gravest first
+              </h2>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="primary"
+                  icon={<BookOpen />}
+                  onClick={() => onOpenLibrary()}
+                >
+                  Add from library
+                </Button>
+                <Button size="sm" icon={<FilePlus2 />} onClick={onNewFinding}>
+                  Blank finding
+                </Button>
+              </div>
+            </div>
+            <ul className="mt-3 overflow-hidden rounded-2xl bg-surface-1">
+              {ordered.map((f) => {
+                const r = rate(f);
+                const gaps = findingGaps(f);
+                return (
+                  <li key={f.id} className="border-b border-line last:border-b-0">
+                    <a
+                      href={href({ name: "finding", projectId: project.id, findingId: f.id })}
+                      className="flex items-center gap-4 px-4 py-3.5 transition-colors sm:px-5 duration-(--dur-micro) hover:bg-hover"
+                    >
+                      <span className="w-11 shrink-0 font-mono text-[12px] text-ink-faint max-sm:hidden">
+                        {refs.get(f.id)}
                       </span>
-                      <span className="mt-0.5 block truncate text-[12.5px] text-ink-faint">
-                        {gaps.length > 0
-                          ? `Needs ${listInWords(gaps)}`
-                          : [f.method, f.endpoint || f.host, f.cwe].filter(Boolean).join(" ") ||
-                            "Complete"}
+                      <span className="min-w-0 flex-1">
+                        <span
+                          className={cx(
+                            "line-clamp-2 text-[14px] font-medium leading-snug sm:line-clamp-1",
+                            !f.title && "text-ink-muted",
+                          )}
+                        >
+                          {f.title || "Untitled finding"}
+                        </span>
+                        <span className="mt-0.5 block truncate text-[12.5px] text-ink-faint">
+                          {gaps.length > 0
+                            ? `Needs ${listInWords(gaps)}`
+                            : [f.method, f.endpoint || f.host, f.cwe].filter(Boolean).join(" ") ||
+                              "Complete"}
+                        </span>
                       </span>
-                    </span>
-                    {f.status !== "Open" ? (
-                      <span className="flex shrink-0 items-center gap-2 text-[12.5px] text-ink-muted max-sm:hidden">
-                        <span className={cx("size-2 rounded-full", STATUS_DOT[f.status])} />
-                        {f.status}
-                      </span>
-                    ) : null}
-                    <span className="flex w-[92px] shrink-0 items-center gap-2 text-[13px]">
-                      <span className={cx("size-2 rounded-full", SEVERITY_CLASS[r.severity].dot)} />
-                      {r.severity}
-                      {r.cvss ? (
-                        <span className="ml-auto font-mono text-[12px] text-ink-faint">
-                          {formatScore(r.cvss.score)}
+                      {f.status !== "Open" ? (
+                        <span className="flex shrink-0 items-center gap-2 text-[12.5px] text-ink-muted max-sm:hidden">
+                          <span className={cx("size-2 rounded-full", STATUS_DOT[f.status])} />
+                          {f.status}
                         </span>
                       ) : null}
-                    </span>
-                  </a>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      )}
+                      <span className="flex w-[92px] shrink-0 items-center gap-2 text-[13px]">
+                        <span
+                          className={cx("size-2 rounded-[2px]", SEVERITY_CLASS[r.severity].dot)}
+                        />
+                        {r.severity}
+                        {r.cvss ? (
+                          <span className="ml-auto font-mono text-[12px] text-ink-faint">
+                            {formatScore(r.cvss.score)}
+                          </span>
+                        ) : null}
+                      </span>
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
 
-      <section aria-labelledby="report-title" className="mt-10">
-        <h2 id="report-title" className="text-[13px] text-ink-faint">
-          {findings.length === 0 ? "Then, the report" : "The report"}
-        </h2>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <ReportCard
-            href={href({ name: "project", projectId: project.id, view: "details" })}
-            icon={<FileText />}
-            title="Report details"
-            text="What the report says before the findings: its title, the dates, the executive summary, scope and methodology."
-            ok={!!summary}
-            status={summary ? "Executive summary written" : "Executive summary to write"}
-          />
-          <ReportCard
-            href={href({ name: "project", projectId: project.id, view: "report" })}
-            icon={<FileDown />}
-            title="Export PDF"
-            text="The typeset report, as it will be sent: preview it, set its colour and logo, and download it."
-            ok={issues === 0}
-            status={issues === 0 ? "Ready to send" : `${issues} to review`}
-          />
-        </div>
-      </section>
-    </article>
+        <section aria-labelledby="report-title" className="mt-10">
+          <h2 id="report-title" className="text-[13px] text-ink-faint">
+            {findings.length === 0 ? "Then, the report" : "The report"}
+          </h2>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <ReportCard
+              href={href({ name: "project", projectId: project.id, view: "details" })}
+              icon={<FileText />}
+              title="Report details"
+              text="What the report says before the findings: its title, the dates, the executive summary, scope and methodology."
+              ok={!!summary}
+              status={summary ? "Executive summary written" : "Executive summary to write"}
+            />
+            <ReportCard
+              href={href({ name: "project", projectId: project.id, view: "report" })}
+              icon={<FileDown />}
+              title="Export PDF"
+              text="The typeset report, as it will be sent: preview it, set its colour and logo, and download it."
+              ok={issues === 0}
+              status={issues === 0 ? "Ready to send" : `${issues} to review`}
+            />
+          </div>
+        </section>
+      </article>
+    </div>
   );
 }
 

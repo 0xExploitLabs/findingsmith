@@ -18,7 +18,7 @@ import {
   Undo2,
   X,
 } from "lucide-react";
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { memo, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { findingGaps, listInWords } from "../../domain/completeness";
 import { formatScore, readCvss } from "../../domain/cvss";
 import { rate } from "../../domain/severity";
@@ -34,6 +34,7 @@ import {
   SeverityBadge,
   TextArea,
 } from "../../ui/primitives";
+import { useEvent } from "../../ui/useEvent";
 import { AddSections, InlineText, Property, Title } from "../doc/DocParts";
 import { type DocController, DocEditor } from "../editor/DocEditor";
 import { CvssCalculator } from "./CvssCalculator";
@@ -91,6 +92,14 @@ function hasValue(f: Finding, key: OptionalKey): boolean {
   return key === "endpoint" ? !!(f.endpoint || f.method) : !!f[key].trim();
 }
 
+/** Everything of a finding that typing its write-up does not change. */
+function sameButText(a: Finding, b: Finding): boolean {
+  for (const key of Object.keys(a) as (keyof Finding)[]) {
+    if (key !== "body" && key !== "notes" && key !== "updatedAt" && a[key] !== b[key]) return false;
+  }
+  return true;
+}
+
 export function FindingEditor({
   finding,
   reference,
@@ -105,52 +114,158 @@ export function FindingEditor({
   onDelete: () => void;
 }) {
   const [notesOpen, setNotesOpen] = useState(!!finding.notes.trim());
-  const [override, setOverride] = useState<Severity | null>(null);
-  const [shown, setShown] = useState<Set<OptionalKey>>(
-    () =>
-      new Set([...ALWAYS, ...OPTIONAL.filter((p) => hasValue(finding, p.key)).map((p) => p.key)]),
-  );
-  const [justAdded, setJustAdded] = useState<OptionalKey | null>(null);
-  const [calculating, setCalculating] = useState(false);
   const editor = useRef<DocController | null>(null);
-  const rating = rate(finding);
-  const cvssRead = finding.cvss.trim() ? readCvss(finding.cvss) : null;
-  const cvssSeverity = rating.cvssSeverity;
-  // biome-ignore lint/correctness/useExhaustiveDependencies: only these four fields decide it
-  const gaps = useMemo(
-    () => findingGaps(finding),
-    [finding.title, finding.body, finding.cvss, finding.manualSeverity],
-  );
+  // The head is rendered again only when its own fields change, so its
+  // callbacks keep one identity and still act on the finding as it is now.
+  const change = useEvent(onChange);
+  const duplicate = useEvent(onDuplicate);
+  const remove = useEvent(onDelete);
+  const toggleNotes = useCallback(() => setNotesOpen((o) => !o), []);
 
-  const pickSeverity = (s: Severity) => {
-    if (!cvssSeverity) onChange({ manualSeverity: s });
-    else if (s === cvssSeverity) onChange({ override: null });
-    else setOverride(s);
-  };
-
-  const remove = (key: OptionalKey) => {
-    onChange(key === "endpoint" ? { endpoint: "", method: "" } : { [key]: "" });
-    setShown((prev) => {
-      const next = new Set(prev);
-      next.delete(key);
-      return next;
-    });
-  };
-
-  const hidden = OPTIONAL.filter((p) => !shown.has(p.key));
+  // What the finding still needs is read from the write-up, which means
+  // parsing it: that waits for a pause in the typing.
+  const { title, body, cvss, manualSeverity } = finding;
+  const [gaps, setGaps] = useState(() => findingGaps(finding));
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    const timer = setTimeout(
+      () =>
+        setGaps((before) => {
+          const now = findingGaps({ title, body, cvss, manualSeverity });
+          return now.join() === before.join() ? before : now;
+        }),
+      350,
+    );
+    return () => clearTimeout(timer);
+  }, [title, body, cvss, manualSeverity]);
 
   return (
     <div className="flex min-h-full">
-      <CvssCalculator
-        open={calculating}
-        vector={finding.cvss}
-        onClose={() => setCalculating(false)}
-        onUse={(cvss) => {
-          onChange({ cvss });
-          setCalculating(false);
-        }}
-      />
       <article className="mx-auto w-full min-w-0 max-w-[800px] px-6 pb-10 pt-10 sm:px-14">
+        <Head
+          finding={finding}
+          reference={reference}
+          gaps={gaps}
+          notesOpen={notesOpen}
+          onToggleNotes={toggleNotes}
+          onChange={change}
+          onDuplicate={duplicate}
+          onDelete={remove}
+        />
+
+        <div className="mt-6 border-t border-line pt-7">
+          <DocEditor
+            key={finding.id}
+            controller={editor}
+            label="Finding write-up"
+            projectId={finding.projectId}
+            value={finding.body}
+            onChange={(body) => onChange({ body })}
+            placeholder="Describe the finding. Each ## heading becomes a section of the report."
+            hints={FINDING_HINTS}
+          />
+          <AddSections
+            body={finding.body}
+            sections={FINDING_SECTIONS}
+            onAdd={(title) => editor.current?.addSection(title)}
+          />
+        </div>
+      </article>
+
+      {notesOpen ? (
+        <aside className="sticky top-0 flex h-screen w-[340px] shrink-0 flex-col border-l border-line bg-surface-1">
+          <div className="flex h-12 shrink-0 items-center gap-2 border-b border-line pl-5 pr-2">
+            <span className="text-[13px] font-semibold">Private notes</span>
+            <span className="text-[12px] text-ink-faint">never in the report</span>
+            <div className="flex-1" />
+            <IconButton label="Close notes" onClick={() => setNotesOpen(false)} className="size-7">
+              <X />
+            </IconButton>
+          </div>
+          <div className="notes-editor min-h-0 flex-1 overflow-y-auto px-5 pt-3">
+            <DocEditor
+              key={`notes-${finding.id}`}
+              label="Private notes"
+              projectId={finding.projectId}
+              value={finding.notes}
+              onChange={(notes) => onChange({ notes })}
+              placeholder="Credentials used, retest notes, open questions."
+            />
+          </div>
+        </aside>
+      ) : null}
+    </div>
+  );
+}
+
+interface HeadProps {
+  finding: Finding;
+  reference: string;
+  gaps: string[];
+  notesOpen: boolean;
+  onToggleNotes: () => void;
+  onChange: (patch: Partial<Finding>) => void;
+  onDuplicate: () => void;
+  onDelete: () => void;
+}
+
+/** A finding above its write-up: its number, title and properties. */
+const Head = memo(
+  function Head({
+    finding,
+    reference,
+    gaps,
+    notesOpen,
+    onToggleNotes,
+    onChange,
+    onDuplicate,
+    onDelete,
+  }: HeadProps) {
+    const [override, setOverride] = useState<Severity | null>(null);
+    const [shown, setShown] = useState<Set<OptionalKey>>(
+      () =>
+        new Set([...ALWAYS, ...OPTIONAL.filter((p) => hasValue(finding, p.key)).map((p) => p.key)]),
+    );
+    const [justAdded, setJustAdded] = useState<OptionalKey | null>(null);
+    const [calculating, setCalculating] = useState(false);
+    const rating = rate(finding);
+    const cvssRead = finding.cvss.trim() ? readCvss(finding.cvss) : null;
+    const cvssSeverity = rating.cvssSeverity;
+
+    const pickSeverity = (s: Severity) => {
+      if (!cvssSeverity) onChange({ manualSeverity: s });
+      else if (s === cvssSeverity) onChange({ override: null });
+      else setOverride(s);
+    };
+
+    const remove = (key: OptionalKey) => {
+      onChange(key === "endpoint" ? { endpoint: "", method: "" } : { [key]: "" });
+      setShown((prev) => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+    };
+
+    const hidden = OPTIONAL.filter((p) => !shown.has(p.key));
+
+    return (
+      <>
+        {calculating ? (
+          <CvssCalculator
+            open
+            vector={finding.cvss}
+            onClose={() => setCalculating(false)}
+            onUse={(cvss) => {
+              onChange({ cvss });
+              setCalculating(false);
+            }}
+          />
+        ) : null}
         <div className="mb-4 flex items-center gap-2">
           <span
             className={cx(
@@ -175,7 +290,7 @@ export function FindingEditor({
           <div className="flex-1" />
           <IconButton
             label={notesOpen ? "Hide private notes" : "Private notes"}
-            onClick={() => setNotesOpen((o) => !o)}
+            onClick={onToggleNotes}
             aria-pressed={notesOpen}
             className={cx(notesOpen && "bg-hover text-ink")}
           >
@@ -326,7 +441,7 @@ export function FindingEditor({
               <button
                 type="button"
                 onClick={() => setCalculating(true)}
-                className="h-7 shrink-0 rounded-md border border-line-strong px-2 text-[12.5px] text-ink-muted transition-colors duration-(--dur-micro) hover:border-line-hover hover:bg-hover hover:text-ink"
+                className="btn btn-raised h-7 shrink-0 rounded-lg border border-line-strong bg-surface-1 px-2.5 text-[12.5px] text-ink-muted hover:border-line-hover hover:text-ink"
               >
                 Calculate
               </button>
@@ -429,59 +544,22 @@ export function FindingEditor({
             {finding.override.reason}
           </p>
         ) : null}
-
-        <div className="mt-6 border-t border-line pt-7">
-          <DocEditor
-            key={finding.id}
-            controller={editor}
-            label="Finding write-up"
-            projectId={finding.projectId}
-            value={finding.body}
-            onChange={(body) => onChange({ body })}
-            placeholder="Describe the finding. Each ## heading becomes a section of the report."
-            hints={FINDING_HINTS}
-          />
-          <AddSections
-            body={finding.body}
-            sections={FINDING_SECTIONS}
-            onAdd={(title) => editor.current?.addSection(title)}
-          />
-        </div>
-      </article>
-
-      {notesOpen ? (
-        <aside className="sticky top-0 flex h-screen w-[340px] shrink-0 flex-col border-l border-line bg-surface-1">
-          <div className="flex h-12 shrink-0 items-center gap-2 border-b border-line pl-5 pr-2">
-            <span className="text-[13px] font-semibold">Private notes</span>
-            <span className="text-[12px] text-ink-faint">never in the report</span>
-            <div className="flex-1" />
-            <IconButton label="Close notes" onClick={() => setNotesOpen(false)} className="size-7">
-              <X />
-            </IconButton>
-          </div>
-          <div className="notes-editor min-h-0 flex-1 overflow-y-auto px-5 pt-3">
-            <DocEditor
-              key={`notes-${finding.id}`}
-              label="Private notes"
-              projectId={finding.projectId}
-              value={finding.notes}
-              onChange={(notes) => onChange({ notes })}
-              placeholder="Credentials used, retest notes, open questions."
-            />
-          </div>
-        </aside>
-      ) : null}
-
-      <OverrideDialog
-        severity={override}
-        onClose={() => setOverride(null)}
-        finding={finding}
-        cvssSeverity={cvssSeverity ?? rating.severity}
-        onSave={(o) => onChange({ override: o })}
-      />
-    </div>
-  );
-}
+        <OverrideDialog
+          severity={override}
+          onClose={() => setOverride(null)}
+          finding={finding}
+          cvssSeverity={cvssSeverity ?? rating.severity}
+          onSave={(o) => onChange({ override: o })}
+        />
+      </>
+    );
+  },
+  (a, b) =>
+    a.reference === b.reference &&
+    a.gaps === b.gaps &&
+    a.notesOpen === b.notesOpen &&
+    sameButText(a.finding, b.finding),
+);
 
 /**
  * Rating a scored finding differently from its CVSS score needs a reason; the

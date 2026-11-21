@@ -8,9 +8,12 @@ export function Title({
   onChange,
   focusWhenEmpty,
   placeholder,
+  display,
 }: {
   value: string;
   onChange: (value: string) => void;
+  /** Set in the display face, for a page that opens on its name. */
+  display?: boolean;
   /** Focus the title when a document with this id opens and has no title yet. */
   focusWhenEmpty?: string;
   placeholder: string;
@@ -37,7 +40,12 @@ export function Title({
       spellCheck={false}
       autoCorrect="off"
       aria-label="Title"
-      className="block w-full resize-none overflow-hidden bg-transparent text-[34px] font-semibold leading-[1.16] tracking-[-0.025em] text-ink outline-none placeholder:text-ink-faint"
+      className={cx(
+        "block w-full resize-none overflow-hidden bg-transparent text-ink outline-none placeholder:text-ink-faint",
+        display
+          ? "font-display text-[44px] italic leading-[1.05] tracking-[-0.02em] sm:text-[60px]"
+          : "text-[34px] font-semibold leading-[1.16] tracking-[-0.025em]",
+      )}
     />
   );
 }

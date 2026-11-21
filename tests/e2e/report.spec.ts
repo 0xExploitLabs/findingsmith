@@ -461,6 +461,35 @@ test("Ctrl+K opens search, in the editor too, where the link shortcut moved asid
   await expect(editor).toContainText("[link text](https://)");
 });
 
+test("the sidebar folds to a rail of icons and stays that way", async ({ page }) => {
+  await newProject(page);
+  await page.getByRole("button", { name: "Add finding" }).click();
+  await page.getByRole("menuitem", { name: /From library/ }).click();
+  await page.getByLabel("Search the library").fill("IDOR");
+  await page.getByRole("dialog").getByRole("button", { name: "Add finding" }).click();
+  const nav = page.locator("#project-nav");
+  expect((await nav.boundingBox())?.width).toBeGreaterThan(250);
+
+  await page.getByRole("button", { name: "Collapse sidebar" }).click();
+  const expand = page.getByRole("button", { name: "Expand sidebar" });
+  await expect(expand).toBeVisible();
+  await expect.poll(async () => (await nav.boundingBox())?.width).toBeLessThan(80);
+  // Everything is still one click away: the finding, the report, a new finding.
+  await expect(
+    nav.getByRole("link", { name: "F-01 Insecure direct object reference" }),
+  ).toBeVisible();
+  await expect(nav.getByRole("button", { name: "Add finding" })).toBeVisible();
+  await nav.getByRole("link", { name: "Report details" }).click();
+  await expect(page).toHaveURL(/\/details$/);
+
+  // The choice outlives a reload, and Ctrl+\ opens it again.
+  await page.reload();
+  await expect(expand).toBeVisible();
+  await page.keyboard.press("Control+\\");
+  await expect(page.getByRole("button", { name: "Collapse sidebar" })).toBeVisible();
+  await expect(nav.getByRole("link", { name: "External web application test" })).toBeVisible();
+});
+
 test("a project card stacks a page per finding behind its cover, and they follow the pointer", async ({
   page,
 }) => {
@@ -477,7 +506,10 @@ test("a project card stacks a page per finding behind its cover, and they follow
   const card = page.getByRole("listitem").filter({ hasText: "External web application test" });
   await expect(card).toContainText("2 findings");
   await expect(card.locator(".stack-page")).toHaveCount(2);
-  await expect(card.locator(".pixel-corner")).toHaveCount(1);
+  await expect(card.locator(".pixel-corner")).toHaveAttribute("data-corner", "br");
+  // The severity mix is a row of pixels, shared between the two severities found.
+  await expect(card.getByRole("img", { name: "1 Critical, 1 Medium" })).toBeVisible();
+  await expect(card.locator(".pixel-meter-cell")).toHaveCount(24);
 
   // Hovering fans the pages out, and the far one travels with the pointer.
   const far = card.locator(".stack-page").first();
