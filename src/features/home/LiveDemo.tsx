@@ -1,14 +1,13 @@
 import { ArrowRight } from "lucide-react";
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import * as db from "../../data/db";
-import { formatScore, readCvss } from "../../domain/cvss";
+import { readCvss } from "../../domain/cvss";
 import { createFinding, createProject, newId } from "../../domain/factories";
-import { SEVERITY_HEX } from "../../domain/severity";
 import { splitSections } from "../../markdown/sections";
 import { navigate } from "../../state/router";
 import { cx } from "../../ui/primitives";
 import { DocEditor } from "../editor/DocEditor";
-import { Preview } from "../editor/Preview";
+import { ReportSheet } from "./ReportSheet";
 
 const TITLE = "SQL injection in the login form";
 const VECTOR = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H";
@@ -96,7 +95,7 @@ export function LiveDemo() {
   return (
     <section
       aria-label="Try it: edit the finding and watch the report page change"
-      className="grid overflow-hidden rounded-2xl border border-line-strong lg:grid-cols-2"
+      className="grid overflow-hidden rounded-2xl border border-line-strong xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]"
       onPointerDownCapture={takeOver}
       onKeyDownCapture={takeOver}
     >
@@ -112,11 +111,11 @@ export function LiveDemo() {
             aria-label="Finding title"
             spellCheck={false}
             autoComplete="off"
-            className="w-full bg-transparent text-[22px] font-semibold tracking-[-0.02em] text-ink outline-none placeholder:text-ink-faint"
+            className="w-full bg-transparent text-[19px] font-semibold sm:text-[22px] tracking-[-0.02em] text-ink outline-none placeholder:text-ink-faint"
             placeholder="Untitled finding"
           />
-          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line pb-4">
-            <label className="flex min-w-0 flex-1 basis-full items-center gap-3 text-[13px] text-ink-faint sm:basis-0">
+          <div className="mt-3 border-b border-line pb-4">
+            <label className="flex items-center gap-3 text-[13px] text-ink-faint">
               CVSS
               <input
                 value={cvss}
@@ -127,13 +126,13 @@ export function LiveDemo() {
                 autoComplete="off"
                 placeholder="Paste a vector or a score"
                 className={cx(
-                  "min-w-0 flex-1 rounded-md bg-transparent px-1.5 py-1 font-mono text-[12.5px] outline-none hover:bg-hover focus:bg-hover",
+                  "min-w-0 flex-1 rounded-md bg-transparent px-1.5 py-1 font-mono text-[12.5px] outline-none transition-colors duration-(--dur-micro) hover:bg-hover focus:bg-hover",
                   read?.ok === false ? "text-danger" : "text-ink",
                 )}
               />
             </label>
-            <fieldset className="flex items-center gap-1">
-              <legend className="sr-only">Try another score</legend>
+            <fieldset className="mt-2 flex items-center gap-1">
+              <legend className="float-left mr-2 text-[13px] text-ink-faint">Or try a score</legend>
               {SCORES.map((s) => (
                 <button
                   key={s}
@@ -141,7 +140,7 @@ export function LiveDemo() {
                   onClick={() => setCvss(s)}
                   aria-pressed={cvss === s}
                   className={cx(
-                    "h-7 rounded-md border px-2 font-mono text-[12px] tabular-nums transition-colors duration-(--dur-micro)",
+                    "h-7 rounded-md border px-2 font-mono text-[12px] tabular-nums transition-[background-color,border-color,color,transform] duration-(--dur-micro) ease-(--ease-out) active:scale-95",
                     cvss === s
                       ? "border-line-hover bg-surface-3 text-ink"
                       : "border-line-strong text-ink-muted hover:bg-hover hover:text-ink",
@@ -153,7 +152,7 @@ export function LiveDemo() {
             </fieldset>
           </div>
         </div>
-        <div className="notes-editor h-[340px] overflow-y-auto px-6 pt-3">
+        <div className="notes-editor h-[340px] xl:h-[430px] overflow-y-auto px-6 pt-3">
           <DocEditor
             label="Sample finding"
             projectId={projectId}
@@ -175,63 +174,16 @@ export function LiveDemo() {
         </div>
       </div>
 
-      <div className="flex min-w-0 flex-col border-t border-line-strong bg-surface-2 lg:border-l lg:border-t-0">
+      <div className="relative flex min-w-0 flex-col border-t border-line-strong bg-surface-2 xl:border-l xl:border-t-0">
         <PaneHead name="Report page" hint="Updates as you type" />
-        <div className="h-[494px] overflow-y-auto px-6 py-6 sm:px-10">
-          <article className="sheet mx-auto min-h-[560px] max-w-[460px] rounded-[2px] bg-sheet px-8 py-7 shadow-page">
-            <div className="flex justify-between gap-4 border-b border-line pb-2 text-[10px] text-ink-faint">
-              <span>Northwind Traders / External web application test</span>
-              <span className="font-semibold text-accent">Confidential</span>
-            </div>
-            <div className="mt-5 flex items-center gap-2">
-              <span className="font-mono text-[10.5px] font-semibold text-accent">F-01</span>
-              {score ? (
-                <span
-                  key={score.severity}
-                  className="animate-in rounded-[3px] px-1.5 py-px text-[10px] font-semibold text-sheet"
-                  style={{ backgroundColor: SEVERITY_HEX[score.severity] }}
-                >
-                  {score.severity}
-                </span>
-              ) : null}
-            </div>
-            <h3 className="mt-1.5 text-[19px] font-semibold leading-tight tracking-[-0.015em] text-ink">
-              {title || "Untitled finding"}
-            </h3>
-            {score ? (
-              <div className="mt-3 flex overflow-hidden rounded-[4px] border border-line">
-                <div
-                  className="w-[84px] shrink-0 px-3 py-2 transition-colors duration-(--dur-short)"
-                  style={{ backgroundColor: `${SEVERITY_HEX[score.severity]}1f` }}
-                >
-                  <div className="text-[9.5px] text-ink-muted">{score.nomenclature}</div>
-                  <div
-                    key={score.score}
-                    className="animate-rise text-[24px] font-semibold leading-none tabular-nums"
-                    style={{ color: SEVERITY_HEX[score.severity] }}
-                  >
-                    {formatScore(score.score)}
-                  </div>
-                </div>
-                <div className="min-w-0 flex-1 px-3 py-2">
-                  <div className="text-[9.5px] text-ink-muted">
-                    {score.vector ? "Vector" : "Base score"}
-                  </div>
-                  <div className="mt-1 break-all font-mono text-[9.5px] leading-snug text-ink">
-                    {score.vector ?? "As reported by the assessor."}
-                  </div>
-                </div>
-              </div>
-            ) : null}
-            {sections.map((s) => (
-              <div key={s.title} className="animate-rise mt-4">
-                {s.title ? (
-                  <h4 className="text-[11px] font-semibold text-accent">{s.title}</h4>
-                ) : null}
-                <Preview source={s.markdown} className="sheet-prose mt-1" />
-              </div>
-            ))}
-          </article>
+        {/* Side by side the page scrolls in its pane; stacked it is shown whole. */}
+        <div className="px-4 py-5 sm:p-7 xl:absolute xl:inset-x-0 xl:bottom-0 xl:top-11 xl:overflow-y-auto">
+          <ReportSheet
+            title={title}
+            score={score}
+            sections={sections}
+            className="mx-auto max-w-[680px]"
+          />
         </div>
       </div>
     </section>
