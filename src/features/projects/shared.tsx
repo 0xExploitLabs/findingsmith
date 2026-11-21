@@ -143,11 +143,10 @@ export function SiteShell({
           >
             <a
               href={href({ name: "home" })}
-              aria-label={`${APP_NAME} by ${ORG_NAME}, home`}
+              aria-label={`${APP_NAME}, home`}
               className="mr-2 rounded-md"
             >
-              <Wordmark compact className="sm:hidden" />
-              <Wordmark compact by className="max-sm:hidden" />
+              <Wordmark compact />
             </a>
             {link("home", "Overview")}
             {link(
