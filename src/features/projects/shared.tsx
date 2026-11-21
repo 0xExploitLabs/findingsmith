@@ -63,7 +63,12 @@ export function useProjectActions() {
   return {
     create: () => setCreating(true),
     newButton: (
-      <Button variant="primary" icon={<Plus />} onClick={() => setCreating(true)}>
+      <Button
+        variant="primary"
+        icon={<Plus />}
+        onClick={() => setCreating(true)}
+        className="[&_svg]:transition-transform [&_svg]:duration-(--dur-medium) [&_svg]:ease-(--ease-spring) enabled:hover:[&_svg]:rotate-90"
+      >
         New project
       </Button>
     ),
@@ -109,8 +114,8 @@ export function SiteShell({
       href={href({ name })}
       aria-current={current === name ? "page" : undefined}
       className={cx(
-        "flex h-8 items-center gap-1.5 rounded-full px-3 text-[13.5px] font-medium transition-colors duration-(--dur-micro)",
-        current === name ? "bg-surface-3 text-ink" : "text-ink-muted hover:text-ink",
+        "flex h-8 items-center gap-1.5 rounded-full px-3 text-[13.5px] font-medium transition-colors duration-(--dur-short) ease-(--ease-out)",
+        current === name ? "bg-surface-3 text-ink" : "text-ink-muted hover:bg-hover hover:text-ink",
       )}
     >
       {label}
@@ -127,7 +132,7 @@ export function SiteShell({
         if (file) void importFile(file);
       }}
     >
-      <header className="pointer-events-none sticky top-0 z-20 h-[68px]">
+      <header className="pointer-events-none sticky top-0 z-20 h-[68px] shrink-0">
         <div className="mx-auto flex h-full max-w-[1240px] items-center gap-2 px-6 [&>*]:pointer-events-auto">
           <nav
             aria-label="Main"
@@ -151,7 +156,7 @@ export function SiteShell({
           <button
             type="button"
             onClick={onNewProject}
-            className="flex h-11 items-center rounded-full bg-ink px-4 text-[13.5px] font-medium text-bg shadow-page transition-transform duration-(--dur-micro) hover:-translate-y-px active:translate-y-0 max-sm:hidden"
+            className="flex h-11 items-center rounded-full bg-ink px-4 text-[13.5px] font-medium text-bg shadow-page transition-transform duration-(--dur-short) ease-(--ease-out) hover:-translate-y-0.5 active:translate-y-0 max-sm:hidden"
           >
             Start a report
           </button>
