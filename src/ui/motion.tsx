@@ -3,15 +3,16 @@ import { cx } from "./primitives";
 
 const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-/** How long the first phrase is held, and how long its words take to fold away. */
-const HOLD = 2600;
+/** How long a phrase is held, and how long its words take to fold away. */
+const HOLD = 3200;
 const FOLD = 420;
 const STAGGER = 70;
 
 /**
  * A headline whose words each arrive through a pixel block. Given two
- * phrases, it shows the first, folds its words back into their pixels, then
- * brings in the second, word by word.
+ * phrases, it shows the first, folds its words back into their pixels, brings
+ * in the second word by word, and goes on trading one for the other every few
+ * seconds. With reduced motion it shows the second and stays.
  */
 export function SwapHeadline({
   first,
@@ -26,28 +27,36 @@ export function SwapHeadline({
   const [phrase, setPhrase] = useState(first);
   const [leaving, setLeaving] = useState(false);
   // The phrases are compared by their text, so a parent re-rendering with equal
-  // arrays never restarts the swap.
-  const words = first.join(" ").split(" ").length;
-  const next = then.join("\n");
+  // arrays never restarts the cycle.
+  const one = first.join("\n");
+  const two = then.join("\n");
   useEffect(() => {
-    const last = next.split("\n");
+    const phrases = [one.split("\n"), two.split("\n")] as const;
     if (reduced()) {
-      setPhrase(last);
+      setPhrase(phrases[1]);
       return;
     }
-    const fold = setTimeout(() => setLeaving(true), HOLD);
-    const swap = setTimeout(
-      () => {
-        setPhrase(last);
-        setLeaving(false);
-      },
-      HOLD + FOLD + (words - 1) * STAGGER,
-    );
-    return () => {
-      clearTimeout(fold);
-      clearTimeout(swap);
+    let shown: 0 | 1 = 0;
+    let timer: ReturnType<typeof setTimeout>;
+    const hold = () => {
+      timer = setTimeout(() => {
+        setLeaving(true);
+        const words = phrases[shown].join(" ").split(" ").length;
+        timer = setTimeout(
+          () => {
+            shown = shown === 0 ? 1 : 0;
+            setPhrase(phrases[shown]);
+            setLeaving(false);
+            hold();
+          },
+          FOLD + (words - 1) * STAGGER,
+        );
+      }, HOLD);
     };
-  }, [next, words]);
+    setPhrase(phrases[0]);
+    hold();
+    return () => clearTimeout(timer);
+  }, [one, two]);
   let index = 0;
   return (
     <h1 className={className} aria-label={then.join(" ")}>
