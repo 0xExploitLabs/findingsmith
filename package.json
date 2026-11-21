@@ -5,6 +5,10 @@
   "description": "Write penetration test reports in Markdown, score findings with CVSS and download a typeset PDF. Runs entirely in the browser.",
   "license": "MIT OR Apache-2.0",
   "type": "module",
+  "packageManager": "pnpm@12.15.0",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
