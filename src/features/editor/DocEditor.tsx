@@ -25,6 +25,7 @@ import { storeImage } from "../../data/assets";
 import { toast } from "../../ui/toast";
 import { CODE_LANGUAGES } from "./codeLang";
 import { livePreview, type SectionHints } from "./livePreview";
+import { htmlToMarkdown } from "./pasteHtml";
 import { focusTable, tableEditing } from "./table";
 
 /**
@@ -185,6 +186,46 @@ const link: Command = (view) => {
   }
   return true;
 };
+
+/**
+ * Text copied from a web page or a chat answer keeps its formatting: the
+ * clipboard's HTML is pasted as Markdown. In code, and when the HTML carries
+ * no formatting, the plain text is pasted as usual.
+ */
+function pasteFormatted(view: EditorView, event: ClipboardEvent): boolean {
+  const html = event.clipboardData?.getData("text/html");
+  const { from, to } = view.state.selection.main;
+  if (event.defaultPrevented || !html || inCode(view.state, from)) return false;
+  const pasted = htmlToMarkdown(html);
+  if (!pasted) return false;
+  event.preventDefault();
+  let { markdown } = pasted;
+  // Blocks get a blank line from the text around them; running text joins it.
+  if (markdown.includes("\n")) {
+    const line = view.state.doc.lineAt(from);
+    if (!pasted.inline && view.state.sliceDoc(line.from, from).trim()) markdown = `\n\n${markdown}`;
+    if (view.state.sliceDoc(to, view.state.doc.lineAt(to).to).trim()) markdown = `${markdown}\n\n`;
+  }
+  view.dispatch(view.state.replaceSelection(markdown), {
+    userEvent: "input.paste",
+    scrollIntoView: true,
+  });
+  return true;
+}
+
+/** Whether a position is inside a code block or inline code. */
+function inCode(state: EditorState, pos: number): boolean {
+  for (
+    let node: SyntaxNode | null = syntaxTree(state).resolveInner(pos, -1);
+    node;
+    node = node.parent
+  ) {
+    if (node.name === "FencedCode" || node.name === "CodeBlock" || node.name === "InlineCode") {
+      return true;
+    }
+  }
+  return false;
+}
 
 async function insertImages(view: EditorView, projectId: string, files: File[], pos?: number) {
   const images = files.filter((f) => f.type.startsWith("image/"));
@@ -504,10 +545,12 @@ export function DocEditor({
           EditorView.domEventHandlers({
             paste(event, ev) {
               const files = [...(event.clipboardData?.files ?? [])];
-              if (!files.some((f) => f.type.startsWith("image/"))) return false;
-              event.preventDefault();
-              void insertImages(ev, projectId, files);
-              return true;
+              if (files.some((f) => f.type.startsWith("image/"))) {
+                event.preventDefault();
+                void insertImages(ev, projectId, files);
+                return true;
+              }
+              return pasteFormatted(ev, event);
             },
             drop(event, ev) {
               const files = [...(event.dataTransfer?.files ?? [])];

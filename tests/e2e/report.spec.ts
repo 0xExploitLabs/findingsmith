@@ -656,3 +656,68 @@ test.describe("on a computer set to dark mode", () => {
     await expect.poll(chrome).toEqual({ blue: false, violet: true, bar: "#0c0c10" });
   });
 });
+
+/** Pastes as a browser does after copying from a web page: HTML, with plain text beside it. */
+async function paste(page: Page, html: string, text: string) {
+  await page.locator("article .cm-content").evaluate(
+    (content, clip) => {
+      const data = new DataTransfer();
+      data.setData("text/html", clip.html);
+      data.setData("text/plain", clip.text);
+      content.dispatchEvent(
+        new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }),
+      );
+    },
+    { html, text },
+  );
+}
+
+test("text copied from a web page keeps its code, bold, links and lists", async ({ page }) => {
+  await newProject(page);
+  await blankFinding(page, "Host header injection");
+  const editor = page.locator("article .cm-content");
+  await editor.locator(".cm-line", { hasText: "What is wrong and where" }).click();
+
+  // As copied from a chat answer: the header names are inline code.
+  await paste(
+    page,
+    "<p>The server takes the <code>X-Forwarded-Host</code> header provided by the user and blindly copies it into the <code>Link</code> response headers (used for SEO/hreflang). By sending a custom header, an attacker can make the website tell search engines that its official domain is a <strong>malicious site</strong>. (Additionally, 12 URLs in <code>sitemap.xml</code> are dead and return 404).</p>" +
+      "<h2>Proof</h2>" +
+      '<ul><li>See <a href="https://example.com/advisory">the advisory</a></li><li>Retested on <em>staging</em></li></ul>' +
+      '<pre><code class="language-http">GET / HTTP/1.1\nX-Forwarded-Host: evil.example\n</code></pre>',
+    "The server takes the X-Forwarded-Host header provided by the user and blindly copies it into the Link response headers (used for SEO/hreflang). By sending a custom header, an attacker can make the website tell search engines that its official domain is a malicious site. (Additionally, 12 URLs in sitemap.xml are dead and return 404).\nProof\nSee the advisory\nRetested on staging\nGET / HTTP/1.1\nX-Forwarded-Host: evil.example",
+  );
+  await expect
+    .poll(() => storedBodies(page))
+    .toContain(
+      "The server takes the `X-Forwarded-Host` header provided by the user and blindly copies it into the `Link` response headers",
+    );
+  const body = await storedBodies(page);
+  expect(body).toContain("a **malicious site**.");
+  expect(body).toContain("12 URLs in `sitemap.xml` are dead");
+  // A pasted heading sits under the section it lands in, not beside it.
+  expect(body).toContain("### Proof");
+  expect(body).toContain("- See [the advisory](https://example.com/advisory)");
+  expect(body).toContain("- Retested on _staging_");
+  expect(body).toContain("```http\nGET / HTTP/1.1\nX-Forwarded-Host: evil.example\n```");
+  // The editor shows it formatted, not as source.
+  await expect(
+    editor.locator(".cm-line", { hasText: "header provided by the user" }),
+  ).not.toContainText("`");
+
+  // Plain text from a page stays as it was: nothing is escaped.
+  await page.keyboard.press("Control+End");
+  await page.keyboard.press("Enter");
+  await paste(
+    page,
+    "<p>Run SELECT * FROM users_1 [as admin]</p>",
+    "Run SELECT * FROM users_1 [as admin]",
+  );
+  await expect.poll(() => storedBodies(page)).toContain("Run SELECT * FROM users_1 [as admin]");
+
+  // In a code block, a paste is the text as copied.
+  await page.keyboard.press("Enter");
+  await slash(page, "code");
+  await paste(page, "<p>Use <code>curl</code> <b>now</b></p>", "Use curl now");
+  await expect.poll(() => storedBodies(page)).toContain("Use curl now");
+});
