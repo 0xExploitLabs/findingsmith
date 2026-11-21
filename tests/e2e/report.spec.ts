@@ -37,6 +37,8 @@ async function pdfText(path: string) {
 async function blankFinding(page: Page, title: string) {
   await page.getByRole("button", { name: "Add finding" }).click();
   await page.getByRole("menuitem", { name: /Blank finding/ }).click();
+  // The project overview has a title too: wait until the new finding is the page.
+  await expect(page).toHaveURL(/\/f\//);
   await page.getByLabel("Title").fill(title);
 }
 
@@ -57,13 +59,9 @@ function storedBodies(page: Page): Promise<string> {
   );
 }
 
-/** Types a slash command and takes the one entry it narrows the menu down to. */
+/** Types a slash command and Enter with no pause, as a fast typist does. */
 async function slash(page: Page, command: string) {
-  const options = page.locator(".cm-tooltip-autocomplete").getByRole("option");
-  await page.keyboard.type("/");
-  await expect(options.first()).toBeVisible();
-  await page.keyboard.type(command);
-  await expect(options).toHaveCount(1);
+  await page.keyboard.type(`/${command}`);
   await page.keyboard.press("Enter");
 }
 
@@ -569,7 +567,11 @@ test("the PDF is a clean report: no Markdown, no watermark", async ({ page }) =>
   await expect(page.getByText("Ready", { exact: true })).toBeVisible();
   await expect(page.locator('iframe[title="Report preview"]')).toBeVisible({ timeout: 30_000 });
 
-  const download = page.waitForEvent("download");
+  // Without a PDF viewer the preview itself arrives as a download each time it
+  // is rebuilt; the one wanted is the file the button names.
+  const download = page.waitForEvent("download", (d) =>
+    d.suggestedFilename().endsWith("-test.pdf"),
+  );
   await page.getByRole("button", { name: "Download PDF" }).click();
   const file = await download;
   expect(file.suggestedFilename()).toBe("Northwind-Traders-External-web-application-test.pdf");

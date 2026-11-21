@@ -1,8 +1,10 @@
 import {
   autocompletion,
   type Completion,
-  type CompletionContext,
+  CompletionContext,
   type CompletionResult,
+  closeCompletion,
+  completionStatus,
 } from "@codemirror/autocomplete";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import {
@@ -375,6 +377,34 @@ function slashMenu(onImage: () => void) {
   };
 }
 
+/**
+ * Enter straight after a slash command takes its entry even when the menu has
+ * not had time to open: "/table" and Enter typed in one go must give a table,
+ * not a new line. It picks what the menu would list first: the first entry
+ * whose name starts with what was typed, or failing that has a word that does.
+ */
+function takeSlashCommand(source: ReturnType<typeof slashMenu>): Command {
+  return (view) => {
+    const { state } = view;
+    const sel = state.selection.main;
+    // Only while the menu is on its way: an open one takes Enter itself, and
+    // one dismissed with Escape leaves the text as it was typed.
+    if (!sel.empty || completionStatus(state) !== "pending") return false;
+    const result = source(new CompletionContext(state, sel.head, true));
+    if (!result) return false;
+    const typed = state.sliceDoc(result.from, sel.head).trim().toLowerCase();
+    if (!typed) return false;
+    const names = result.options.map((o) => o.label.toLowerCase());
+    let at = names.findIndex((name) => name.startsWith(typed));
+    if (at < 0) at = names.findIndex((name) => name.split(" ").some((w) => w.startsWith(typed)));
+    const option = result.options[at];
+    if (!option || typeof option.apply !== "function") return false;
+    closeCompletion(view);
+    option.apply(view, option, result.from, sel.head);
+    return true;
+  };
+}
+
 /** Draws an entry's icon at the start of its row. */
 function renderIcon(completion: Completion): HTMLElement {
   const box = document.createElement("span");
@@ -419,6 +449,7 @@ export function DocEditor({
   // biome-ignore lint/correctness/useExhaustiveDependencies: created once per document; later value changes are synced below
   useEffect(() => {
     if (!host.current) return;
+    const slash = slashMenu(() => fileInput.current?.click());
     const v = new EditorView({
       parent: host.current,
       state: EditorState.create({
@@ -434,11 +465,14 @@ export function DocEditor({
           autoCloseFence,
           search({ top: true }),
           autocompletion({
-            override: [slashMenu(() => fileInput.current?.click())],
+            override: [slash],
             icons: false,
             closeOnBlur: true,
             addToOptions: [{ render: renderIcon, position: 20 }],
             maxRenderedOptions: 60,
+            // The menu is asked for by typing "/", so nothing guards against it.
+            activateOnTypingDelay: 0,
+            interactionDelay: 0,
           }),
           placeholderExt(placeholder ?? ""),
           EditorView.contentAttributes.of({
@@ -449,6 +483,7 @@ export function DocEditor({
           }),
           keymap.of([
             // Enter on an empty list item ends the list, as in Obsidian.
+            { key: "Enter", run: takeSlashCommand(slash) },
             { key: "Enter", run: closeFenceOnEnter },
             { key: "Enter", run: insertNewlineContinueMarkupCommand({ nonTightLists: false }) },
             { key: "Backspace", run: deleteMarkupBackward },
