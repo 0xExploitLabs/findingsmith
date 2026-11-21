@@ -1,6 +1,6 @@
 import { FileUp, Plus } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
-import { ORG_URL } from "../../brand";
+import { APP_NAME, ORG_NAME, ORG_URL } from "../../brand";
 import * as db from "../../data/db";
 import { importProject } from "../../data/transfer";
 import { createProject } from "../../domain/factories";
@@ -55,6 +55,9 @@ async function importFile(file: File) {
     toast(err instanceof Error ? err.message : "Import failed", "error");
   }
 }
+
+const FOOT_LINK =
+  "rounded-sm text-ink underline decoration-transparent underline-offset-4 transition-[text-decoration-color] duration-(--dur-short) hover:decoration-current";
 
 /** The two ways to start a project, and the dialog the first one opens. */
 export function useProjectActions() {
@@ -166,23 +169,56 @@ export function SiteShell({
         </div>
       </header>
       <main className="flex-1">{children}</main>
-      <footer className="overflow-hidden pt-16">
-        <div className="mx-auto flex max-w-[1240px] flex-wrap items-end justify-between gap-6 px-6">
-          <p className="font-display text-[44px] italic leading-none tracking-[-0.02em]">Debrief</p>
-          <div className="text-right text-[12.5px] text-ink-faint">
-            <p>Your data is stored in this browser’s IndexedDB and never leaves this device.</p>
-            <a
-              href={ORG_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-1 inline-block rounded-sm hover:text-ink"
-            >
-              Made by <span className="[font-feature-settings:'zero']">0xExploitLabs</span>
-            </a>
+      <footer className="shrink-0 overflow-hidden pt-20 sm:pt-28">
+        <div className="mx-auto max-w-[1240px] px-6">
+          <div className="grid gap-x-16 gap-y-12 md:grid-cols-[minmax(0,1fr)_auto_auto]">
+            <div>
+              <p className="font-display text-[64px] italic leading-[0.9] tracking-[-0.02em] sm:text-[88px]">
+                {APP_NAME}
+              </p>
+              <p className="mt-5 max-w-[40ch] text-[14.5px] leading-relaxed text-ink-muted">
+                Pentest reports, written like notes. Everything is stored in this browser’s
+                IndexedDB and never leaves this device.
+              </p>
+            </div>
+            <nav aria-label="Footer" className="contents">
+              <div>
+                <h2 className="text-[13px] text-ink-faint">Product</h2>
+                <ul className="mt-3 space-y-2 text-[14.5px]">
+                  <li>
+                    <a href={href({ name: "home" })} className={FOOT_LINK}>
+                      Overview
+                    </a>
+                  </li>
+                  <li>
+                    <a href={href({ name: "projects" })} className={FOOT_LINK}>
+                      Projects
+                    </a>
+                  </li>
+                  <li>
+                    <button type="button" onClick={onNewProject} className={FOOT_LINK}>
+                      Start a report
+                    </button>
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <h2 className="text-[13px] text-ink-faint">Made by</h2>
+                <ul className="mt-3 space-y-2 text-[14.5px]">
+                  <li>
+                    <a href={ORG_URL} target="_blank" rel="noreferrer" className={FOOT_LINK}>
+                      <span className="[font-feature-settings:'zero']">{ORG_NAME}</span>
+                    </a>
+                  </li>
+                  <li className="text-ink-muted">No account, no server</li>
+                  <li className="text-ink-muted">MIT or Apache-2.0</li>
+                </ul>
+              </div>
+            </nav>
           </div>
         </div>
         <Cicada
-          className="hatched mx-auto mt-10 block w-[min(1100px,92%)] translate-y-[18%] text-accent"
+          className="hatched mx-auto mt-14 block w-[min(1100px,92%)] translate-y-[18%] text-accent sm:mt-20"
           hatch
         />
       </footer>
