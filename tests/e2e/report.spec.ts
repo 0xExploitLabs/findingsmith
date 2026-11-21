@@ -29,6 +29,25 @@ async function blankFinding(page: Page, title: string) {
   await page.getByLabel("Title").fill(title);
 }
 
+test("the overview demo is live: the page follows the editor, and can be kept", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const sheet = page.locator("article.sheet");
+  // The sample types itself; the first touch completes it.
+  await page.getByRole("button", { name: "5.3" }).click();
+  await expect(sheet).toContainText("Medium");
+  await expect(sheet).toContainText("Remediation");
+  await page.getByLabel("CVSS vector or score").fill("9.1");
+  await expect(sheet).toContainText("Critical");
+  await page.getByLabel("Finding title").fill("Blind SQL injection");
+  await expect(sheet.getByRole("heading", { name: "Blind SQL injection" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Keep this as my first project" }).click();
+  await expect(page.getByLabel("Title")).toHaveValue("Blind SQL injection");
+  await expect(page.locator("dd").first()).toContainText("Critical");
+});
+
 test("the projects page lists every project and opens its report", async ({ page }) => {
   await newProject(page);
   await page.getByRole("link", { name: "Projects" }).click();

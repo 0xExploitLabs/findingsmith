@@ -3,7 +3,22 @@ import { useEffect } from "react";
 import { href } from "../../state/router";
 import { countSeverities, SeverityMix } from "../../ui/SeverityMix";
 import { relative, SiteShell, useProjectActions, useProjects } from "../projects/shared";
-import { CreationStage } from "./CreationStage";
+import { after, LiveDemo } from "./LiveDemo";
+
+const FACTS = [
+  [
+    "Evidence, pasted in",
+    "Screenshots and HTTP requests go straight into the finding, next to the text they prove.",
+  ],
+  [
+    "Severity you can defend",
+    "It follows the CVSS score, so a 5.3 is always Medium. Rate it differently and the report prints your reason.",
+  ],
+  [
+    "Nothing leaves this browser",
+    "No account and no server. Projects live in this browser, and one file moves them to another.",
+  ],
+] as const;
 
 /** The overview: what Debrief is, how a report is made, and your latest work. */
 export function Home() {
@@ -19,23 +34,27 @@ export function Home() {
   return (
     <SiteShell current="home" projectCount={rows?.length ?? null}>
       <div className="mx-auto max-w-[1240px] px-6 pb-24">
-        <section className="flex flex-wrap items-end justify-between gap-x-12 gap-y-6 pb-12 pt-14">
+        <section className="flex flex-wrap items-end justify-between gap-x-12 gap-y-6 pb-10 pt-12">
           <div>
-            <h1 className="max-w-[16ch] text-[40px] font-semibold leading-[1.06] tracking-[-0.03em] sm:text-[52px]">
-              Pentest reports, written like notes
+            <h1 className="text-[44px] font-semibold leading-[1.02] tracking-[-0.035em] sm:text-[64px] lg:text-[76px]">
+              <span className="rise-late block">Pentest reports,</span>
+              <span className="rise-late block text-ink-muted" style={after(0.12)}>
+                written like notes
+              </span>
             </h1>
-            <p className="mt-4 max-w-[46ch] text-[16px] leading-relaxed text-ink-muted">
-              Write each finding in Markdown and download a typeset PDF your client can read.
-            </p>
           </div>
-          <div className="flex flex-col items-start gap-3 pb-1">
+          <div
+            className="rise-late flex max-w-[340px] flex-col items-start gap-4 pb-2"
+            style={after(0.3)}
+          >
+            <p className="text-[15px] leading-relaxed text-ink-muted">
+              Write each finding in Markdown and download a typeset PDF your client can read. Try it
+              below.
+            </p>
             <div className="flex flex-wrap gap-2.5">
               {actions.newButton}
               {actions.importButton}
             </div>
-            <p className="text-[13px] text-ink-faint">
-              Or drop a project file anywhere on this page.
-            </p>
           </div>
         </section>
 
@@ -81,7 +100,18 @@ export function Home() {
           </section>
         ) : null}
 
-        <CreationStage />
+        <div className="rise-late" style={after(0.45)}>
+          <LiveDemo />
+        </div>
+
+        <dl className="mt-14 grid gap-x-10 gap-y-8 md:grid-cols-3">
+          {FACTS.map(([term, text]) => (
+            <div key={term} className="border-t border-line-strong pt-4">
+              <dt className="text-[20px] font-semibold tracking-[-0.02em]">{term}</dt>
+              <dd className="mt-2 text-[14px] leading-relaxed text-ink-muted">{text}</dd>
+            </div>
+          ))}
+        </dl>
       </div>
       {actions.dialog}
     </SiteShell>
