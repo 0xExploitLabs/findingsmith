@@ -4,15 +4,18 @@ import { cx } from "./primitives";
 
 const path = /<path[^>]*>/.exec(cicada)?.[0] ?? "";
 
-/** The founder-drawn cicada, coloured by `currentColor`. */
-export function Cicada({ className }: { className?: string }) {
+const HATCH =
+  '<defs><pattern id="hatch" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(-38)"><rect width="14" height="5" fill="currentColor"/></pattern></defs>';
+
+/** The founder-drawn cicada, coloured by `currentColor`; `hatch` fills it with ruled lines. */
+export function Cicada({ className, hatch }: { className?: string; hatch?: boolean }) {
   return (
     <svg
       viewBox="0 0 1958 690"
       aria-hidden="true"
       className={className}
       // biome-ignore lint/security/noDangerouslySetInnerHtml: a static brand asset bundled with the app
-      dangerouslySetInnerHTML={{ __html: path }}
+      dangerouslySetInnerHTML={{ __html: (hatch ? HATCH : "") + path }}
     />
   );
 }

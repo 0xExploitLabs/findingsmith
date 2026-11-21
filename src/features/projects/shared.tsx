@@ -9,7 +9,7 @@ import { href, navigate, type Route } from "../../state/router";
 import { Button, cx, Dialog, Field, TextInput } from "../../ui/primitives";
 import { ThemeToggle } from "../../ui/ThemeToggle";
 import { toast } from "../../ui/toast";
-import { Wordmark } from "../../ui/Wordmark";
+import { Cicada, Wordmark } from "../../ui/Wordmark";
 
 export interface ProjectRow {
   project: Project;
@@ -96,10 +96,12 @@ export function useProjectActions() {
 export function SiteShell({
   current,
   projectCount,
+  onNewProject,
   children,
 }: {
   current: Extract<Route, { name: "home" | "projects" }>["name"];
   projectCount: number | null;
+  onNewProject: () => void;
   children: ReactNode;
 }) {
   const link = (name: "home" | "projects", label: ReactNode) => (
@@ -107,8 +109,8 @@ export function SiteShell({
       href={href({ name })}
       aria-current={current === name ? "page" : undefined}
       className={cx(
-        "flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[13.5px] transition-colors duration-(--dur-micro)",
-        current === name ? "bg-surface-3 text-ink" : "text-ink-muted hover:bg-hover hover:text-ink",
+        "flex h-8 items-center gap-1.5 rounded-full px-3 text-[13.5px] font-medium transition-colors duration-(--dur-micro)",
+        current === name ? "bg-surface-3 text-ink" : "text-ink-muted hover:text-ink",
       )}
     >
       {label}
@@ -125,17 +127,15 @@ export function SiteShell({
         if (file) void importFile(file);
       }}
     >
-      <header className="sticky top-0 z-10 border-b border-line bg-bar backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-[1240px] items-center gap-1 px-6">
-          <a
-            href={href({ name: "home" })}
-            aria-label="Debrief, home"
-            className="mr-2 rounded-md sm:mr-4"
+      <header className="pointer-events-none sticky top-0 z-20 h-[68px]">
+        <div className="mx-auto flex h-full max-w-[1240px] items-center gap-2 px-6 [&>*]:pointer-events-auto">
+          <nav
+            aria-label="Main"
+            className="flex h-11 items-center gap-0.5 rounded-full bg-surface-1 pl-4 pr-1.5 shadow-page"
           >
-            <Wordmark className="max-sm:hidden" />
-            <Wordmark compact className="sm:hidden" />
-          </a>
-          <nav aria-label="Main" className="flex items-center gap-1">
+            <a href={href({ name: "home" })} aria-label="Debrief, home" className="mr-2 rounded-md">
+              <Wordmark compact />
+            </a>
             {link("home", "Overview")}
             {link(
               "projects",
@@ -148,17 +148,38 @@ export function SiteShell({
             )}
           </nav>
           <div className="flex-1" />
-          <ThemeToggle />
+          <button
+            type="button"
+            onClick={onNewProject}
+            className="flex h-11 items-center rounded-full bg-ink px-4 text-[13.5px] font-medium text-bg shadow-page transition-transform duration-(--dur-micro) hover:-translate-y-px active:translate-y-0 max-sm:hidden"
+          >
+            Start a report
+          </button>
+          <span className="flex size-11 items-center justify-center rounded-full bg-surface-1 shadow-page">
+            <ThemeToggle />
+          </span>
         </div>
       </header>
       <main className="flex-1">{children}</main>
-      <footer className="border-t border-line">
-        <div className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-between gap-2 px-6 py-5 text-[12.5px] text-ink-faint">
-          <span>Your data is stored in this browser’s IndexedDB and never leaves this device.</span>
-          <a href={ORG_URL} target="_blank" rel="noreferrer" className="rounded-sm hover:text-ink">
-            Made by <span className="[font-feature-settings:'zero']">0xExploitLabs</span>
-          </a>
+      <footer className="overflow-hidden pt-16">
+        <div className="mx-auto flex max-w-[1240px] flex-wrap items-end justify-between gap-6 px-6">
+          <p className="font-display text-[44px] italic leading-none tracking-[-0.02em]">Debrief</p>
+          <div className="text-right text-[12.5px] text-ink-faint">
+            <p>Your data is stored in this browser’s IndexedDB and never leaves this device.</p>
+            <a
+              href={ORG_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-1 inline-block rounded-sm hover:text-ink"
+            >
+              Made by <span className="[font-feature-settings:'zero']">0xExploitLabs</span>
+            </a>
+          </div>
         </div>
+        <Cicada
+          className="hatched mx-auto mt-10 block w-[min(1100px,92%)] translate-y-[18%] text-accent"
+          hatch
+        />
       </footer>
     </div>
   );
