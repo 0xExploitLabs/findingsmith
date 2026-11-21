@@ -1,21 +1,17 @@
 /* Hallmark · shape: app screen · genre: modern-minimal · theme: brand · redesign: full
- * paper: oklch(16% 0.004 286) dark, oklch(96% 0.008 217) light · accent: oklch(78% 0.134 212) dark, oklch(48% 0.082 212) light · display: 0x Sans · body: 0x Sans
+ * paper: oklch(98% 0.002 286) light, oklch(16% 0.008 286) dark · accent: oklch(52% 0.26 281) light, oklch(70% 0.17 287) dark · display: Instrument Serif italic · body: Geist
  * nav: kept (a top bar on home, the project sidebar in the workspace) · signature: the findings ledger, each finding's severity and score in one line · states: empty, loading, error, full
- * axes: dark ink paper/grotesk/cyan signal · posture: restrained · contrast: pass · v2.0.0 */
+ * axes: white paper/italic serif/violet pixel field · posture: restrained · contrast: pass · v2.0.0 */
 /* Hallmark · pre-emit critique: P4 H4 E4 S4 R4 V3 · weakest: V, the shell is kept; home now leads with real pages the app rendered instead of a drawing */
 /* Hallmark · reworded "pentest reports, written like notes." to "Pentest reports, written like notes" · 38iii names the accent-coloured full stop */
 /* Hallmark · dropped Projects · the first-visit screen has no list to head, and the heading returns as the page title once a project exists */
 /* Hallmark · reworded "Delete this project?" · the delete handler is kept, only the quotes around the project name in its message became curly */
 /* Hallmark · dismissed 3 · the two side rules are Markdown blockquotes in the editor and preview, where a left rule is the convention, not a card stripe */
 /* Hallmark · answered F24 · the slash menu floats over editor text on a dark surface, where a shadow alone does not separate it, so it keeps its hairline like every other menu */
+/* Hallmark · dismissed 56 · the second sticky is the pinned full-screen pixel page, and the floating bar is meant to ride over it */
 @import "tailwindcss";
-
-@font-face {
-  font-family: "0x Sans";
-  src: url("/fonts/0x-sans.woff2") format("woff2");
-  font-weight: 300 800;
-  font-display: swap;
-}
+@import "@fontsource-variable/geist";
+@import "@fontsource/instrument-serif/400-italic.css";
 
 @font-face {
   font-family: "JetBrains Mono";
@@ -30,18 +26,18 @@
    light is its own palette, not an inversion.
    ───────────────────────────────────────────────────────────── */
 :root {
-  --brand-bg: 13 13 15;
-  --brand-surface-1: 17 17 19;
-  --brand-surface-2: 21 21 24;
-  --brand-surface-3: 28 28 31;
-  --brand-code: 8 8 10;
-  --brand-ink: 236 238 240;
-  --brand-ink-muted: 161 167 173;
-  --brand-ink-inverse: 9 9 11;
+  --brand-bg: 12 12 16;
+  --brand-surface-1: 18 18 23;
+  --brand-surface-2: 24 24 31;
+  --brand-surface-3: 36 36 46;
+  --brand-code: 8 8 11;
+  --brand-ink: 240 240 246;
+  --brand-ink-muted: 166 166 180;
+  --brand-ink-inverse: 10 10 14;
   --brand-shadow: 0 0 0;
-  --brand-accent: 14 204 232;
-  --brand-accent-deep: 11 164 186;
-  --brand-glow: 14 204 232;
+  --brand-accent: 152 134 255;
+  --brand-accent-deep: 132 112 248;
+  --brand-glow: 152 134 255;
   --brand-signal-add: 40 202 65;
   --brand-signal-warn: 255 189 46;
   --brand-signal-drop: 255 95 87;
@@ -55,18 +51,18 @@
 }
 
 :root[data-scheme="light"] {
-  --brand-bg: 237 244 246;
-  --brand-surface-1: 247 251 252;
-  --brand-surface-2: 242 248 249;
-  --brand-surface-3: 220 230 232;
-  --brand-code: 226 234 236;
-  --brand-ink: 11 24 27;
-  --brand-ink-muted: 78 94 97;
-  --brand-ink-inverse: 249 252 253;
-  --brand-shadow: 4 39 45;
-  --brand-accent: 3 104 119;
-  --brand-accent-deep: 5 80 91;
-  --brand-glow: 4 144 164;
+  --brand-bg: 248 248 250;
+  --brand-surface-1: 255 255 255;
+  --brand-surface-2: 241 241 246;
+  --brand-surface-3: 228 228 237;
+  --brand-code: 240 240 246;
+  --brand-ink: 10 10 14;
+  --brand-ink-muted: 88 88 102;
+  --brand-ink-inverse: 255 255 255;
+  --brand-shadow: 30 20 80;
+  --brand-accent: 91 61 245;
+  --brand-accent-deep: 70 42 214;
+  --brand-glow: 91 61 245;
   --brand-signal-add: 34 106 48;
   --brand-signal-warn: 140 82 0;
   --brand-signal-drop: 178 38 32;
@@ -108,13 +104,19 @@
   --color-ok-soft: rgb(var(--brand-signal-add) / 0.14);
   /* The report's own paper, for previews of what will print on it. */
   --color-sheet: rgb(255 255 255);
+  --color-sheet-ink: rgb(11 24 27);
+  --color-sheet-muted: rgb(85 102 106);
+  --color-sheet-rule: rgb(213 223 225);
+  --color-sheet-wash: rgb(243 246 247);
+  --color-sheet-accent: rgb(3 104 119);
   --color-bar: rgb(var(--brand-bg) / 0.86);
   --color-sev-critical: rgb(var(--sev-critical));
   --color-sev-high: rgb(var(--sev-high));
   --color-sev-medium: rgb(var(--sev-medium));
   --color-sev-low: rgb(var(--sev-low));
   --color-sev-info: rgb(var(--sev-info));
-  --font-sans: "0x Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Instrument Serif", ui-serif, Georgia, serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
   --shadow-pop:
     0 1px 0 rgb(var(--brand-ink) / 0.06) inset, 0 18px 50px -12px rgb(var(--brand-shadow) / 0.55),
@@ -171,6 +173,51 @@
   }
   to {
     clip-path: inset(0);
+  }
+}
+
+/* A headline word arrives through a pixel: the block swells and bursts, and the
+   word grows out of where it was. */
+@keyframes word-block {
+  0% {
+    opacity: 1;
+    transform: scale(0.6);
+  }
+  35% {
+    opacity: 1;
+    transform: scale(1.9);
+  }
+  60%,
+  100% {
+    opacity: 0;
+    transform: scale(0);
+  }
+}
+
+@keyframes word-grow {
+  0%,
+  30% {
+    opacity: 0;
+    transform: scale(0.35);
+  }
+  35% {
+    opacity: 1;
+    transform: scale(0.35);
+  }
+  65%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes flow-in {
+  from {
+    opacity: 0;
+    transform: translateY(160px) scale(1.18);
+  }
+  12% {
+    opacity: 1;
   }
 }
 
@@ -703,6 +750,36 @@
 .write-in {
   animation: write-in var(--t, 1.4s) var(--ease-in-out) var(--d, 0s) both;
 }
+.swap-word {
+  position: relative;
+  display: inline-block;
+}
+.swap-word > .pixel {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0.42em;
+  height: 0.42em;
+  margin: -0.21em 0 0 -0.21em;
+  background: var(--color-accent);
+  animation: word-block 0.62s var(--ease-out) calc(var(--i) * 80ms) both;
+}
+.swap-word > .text {
+  display: inline-block;
+  animation: word-grow 0.62s var(--ease-out) calc(var(--i) * 80ms) both;
+}
+[data-flow="wait"] {
+  opacity: 0;
+}
+[data-flow="in"] {
+  animation: flow-in 1.3s var(--ease-out) var(--d, 0s) both;
+}
+.pixelated {
+  image-rendering: pixelated;
+}
+.hatched path {
+  fill: url("#hatch");
+}
 .grow-x {
   transform-origin: left center;
   animation: grow-x 0.6s var(--ease-out) var(--d, 0s) both;
@@ -711,14 +788,14 @@
 /* A sheet of the report: always paper white with the light palette, whatever
    the theme around it, because that is how it prints. */
 .sheet {
-  --color-ink: rgb(11 24 27);
-  --color-ink-muted: rgb(85 102 106);
-  --color-ink-faint: rgb(122 138 142);
-  --color-accent: rgb(3 104 119);
-  --color-line: rgb(213 223 225);
-  --color-line-strong: rgb(213 223 225);
-  --color-code: rgb(243 246 247);
-  --color-surface-2: rgb(242 246 247);
+  --color-ink: var(--color-sheet-ink);
+  --color-ink-muted: var(--color-sheet-muted);
+  --color-ink-faint: var(--color-sheet-muted);
+  --color-accent: var(--color-sheet-accent);
+  --color-line: var(--color-sheet-rule);
+  --color-line-strong: var(--color-sheet-rule);
+  --color-code: var(--color-sheet-wash);
+  --color-surface-2: var(--color-sheet-wash);
   --brand-ink: 11 24 27;
   --brand-accent: 3 104 119;
   --brand-signal-warn: 138 82 0;

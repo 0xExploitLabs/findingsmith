@@ -103,4 +103,5 @@ Fonts bundled in `public/fonts` keep their own licenses:
 
 - JetBrains Mono, SIL Open Font License 1.1, see `LICENSES/OFL-1.1-JetBrainsMono.txt`.
 - Noto Sans, a Latin, Greek and Cyrillic subset used as the PDF fallback, SIL Open Font License 1.1, see `LICENSES/OFL-1.1-NotoSans.txt`.
-- 0x Sans is the 0xExploitLabs brand typeface and is not covered by the code license.
+- Geist and Instrument Serif, the interface typefaces, SIL Open Font License 1.1, installed from the `@fontsource` packages.
+- 0x Sans, used in the PDF only, is the 0xExploitLabs brand typeface and is not covered by the code license.
