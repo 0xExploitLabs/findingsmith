@@ -6,7 +6,20 @@ import { type Finding, type Project, SEVERITIES, type Severity, STATUSES } from 
 import { findSection, splitSections } from "../markdown/sections";
 import { hasContent } from "../markdown/text";
 import { MarkdownPdf, type MdContext, type PdfImage } from "./markdown";
-import { DISPLAY, FAINT, INK, isHexColor, MONO, MUTED, RULE, SANS, tint, WASH } from "./theme";
+import {
+  DISPLAY,
+  FAINT,
+  INK,
+  isHexColor,
+  MEDIUM_TEXT,
+  MONO,
+  MUTED,
+  PAPER,
+  RULE,
+  SANS,
+  tint,
+  WASH,
+} from "./theme";
 
 /** react-pdf turns `bookmark` on any node into a PDF outline entry; its types only allow it on Page. */
 const Marked = View as unknown as ComponentType<
@@ -317,7 +330,7 @@ const pageStyle = {
   fontFamily: SANS,
   fontSize: 9.6,
   color: INK,
-  backgroundColor: "#FFFFFF",
+  backgroundColor: PAPER,
 };
 
 function PageChrome({ project, accent }: { project: Project; accent: string }) {
@@ -399,7 +412,7 @@ function Cover({
   return (
     <Page
       size="A4"
-      style={{ backgroundColor: "#FFFFFF", fontFamily: SANS, color: INK }}
+      style={{ backgroundColor: PAPER, fontFamily: SANS, color: INK }}
       bookmark="Cover"
     >
       <View
@@ -604,7 +617,7 @@ export function SeverityPill({ severity, small }: { severity: Severity; small?: 
         style={{
           fontSize: small ? 7 : 7.8,
           fontWeight: 700,
-          color: severity === "Medium" ? "#7A5300" : color,
+          color: severity === "Medium" ? MEDIUM_TEXT : color,
           letterSpacing: 0.4,
           textTransform: "uppercase",
         }}
@@ -1065,7 +1078,7 @@ function Appendix({ accent }: { accent: string }) {
     <View>
       <SectionTitle num="A" title="Severity rating" accent={accent} />
       <Text style={{ fontSize: 9.6, lineHeight: 1.55, color: INK }}>
-        Each finding's severity is the qualitative rating of its CVSS base score, using the scale
+        Each finding’s severity is the qualitative rating of its CVSS base score, using the scale
         defined in the CVSS v3.1 and v4.0 specifications published by FIRST. Where the assessor
         rated a finding differently from its score, for example because of compensating controls or
         business context, the finding says so and gives the reason. Findings without a CVSS vector

@@ -14,7 +14,7 @@ import type { ReactNode } from "react";
 import { highlightCode } from "../markdown/highlight";
 import { parseMarkdown } from "../markdown/parse";
 import { htmlAsText } from "../markdown/text";
-import { CODE_BG, FAINT, INK, MONO, MUTED, RULE, SANS, SYNTAX, WASH } from "./theme";
+import { CODE_BG, FAINT, INK, MONO, MUTED, PAPER, RULE, SANS, STRIPE, SYNTAX, WASH } from "./theme";
 
 export interface PdfImage {
   src: string;
@@ -278,7 +278,7 @@ function list(node: List, ctx: MdContext, key: string, top: number): ReactNode {
                     height: 8,
                     borderWidth: 0.9,
                     borderColor: item.checked ? ctx.accent : FAINT,
-                    backgroundColor: item.checked ? ctx.accent : "#FFFFFF",
+                    backgroundColor: item.checked ? ctx.accent : PAPER,
                     borderRadius: 1.5,
                   }}
                 />
@@ -305,7 +305,7 @@ function table(node: Table, ctx: MdContext, key: string, top: number): ReactNode
           wrap={false}
           style={{
             flexDirection: "row",
-            backgroundColor: r === 0 ? WASH : r % 2 === 0 ? "#FAFCFC" : "#FFFFFF",
+            backgroundColor: r === 0 ? WASH : r % 2 === 0 ? STRIPE : PAPER,
             borderTopWidth: r === 0 ? 0 : 0.75,
             borderTopColor: RULE,
           }}
