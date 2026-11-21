@@ -111,7 +111,7 @@ export function LiveDemo() {
             aria-label="Finding title"
             spellCheck={false}
             autoComplete="off"
-            className="w-full bg-transparent text-[19px] font-semibold sm:text-[22px] tracking-[-0.02em] text-ink outline-none placeholder:text-ink-faint"
+            className="-mx-2 w-[calc(100%+1rem)] rounded-lg bg-transparent px-2 py-1 text-[19px] font-semibold transition-colors duration-(--dur-micro) hover:bg-surface-2 focus:bg-surface-2 sm:text-[22px] tracking-[-0.02em] text-ink outline-none placeholder:text-ink-faint"
             placeholder="Untitled finding"
           />
           <div className="mt-3 border-b border-line pb-4">
@@ -126,7 +126,7 @@ export function LiveDemo() {
                 autoComplete="off"
                 placeholder="Paste a vector or a score"
                 className={cx(
-                  "min-w-0 flex-1 rounded-md bg-transparent px-1.5 py-1 font-mono text-[12.5px] outline-none transition-colors duration-(--dur-micro) hover:bg-hover focus:bg-hover",
+                  "h-8 min-w-0 flex-1 rounded-md border border-line-strong bg-surface-2 px-2 font-mono text-[12.5px] outline-none transition-colors duration-(--dur-micro) hover:border-line-hover focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-accent",
                   read?.ok === false ? "text-danger" : "text-ink",
                 )}
               />
@@ -140,7 +140,7 @@ export function LiveDemo() {
                   onClick={() => setCvss(s)}
                   aria-pressed={cvss === s}
                   className={cx(
-                    "h-7 rounded-md border px-2 font-mono text-[12px] tabular-nums transition-[background-color,border-color,color,transform] duration-(--dur-micro) ease-(--ease-out) active:scale-95",
+                    "h-8 rounded-md border px-2.5 font-mono text-[12px] tabular-nums transition-[background-color,border-color,color,transform] duration-(--dur-micro) ease-(--ease-out) active:scale-95",
                     cvss === s
                       ? "border-line-hover bg-surface-3 text-ink"
                       : "border-line-strong text-ink-muted hover:bg-hover hover:text-ink",
@@ -152,7 +152,7 @@ export function LiveDemo() {
             </fieldset>
           </div>
         </div>
-        <div className="notes-editor h-[340px] xl:h-[430px] overflow-y-auto px-6 pt-3">
+        <div className="notes-editor h-[340px] xl:h-auto xl:min-h-[340px] xl:flex-1 xl:basis-0 overflow-y-auto px-6 pt-3">
           <DocEditor
             label="Sample finding"
             projectId={projectId}
@@ -166,7 +166,7 @@ export function LiveDemo() {
           <button
             type="button"
             onClick={() => void keep()}
-            className="flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-medium text-accent transition-colors duration-(--dur-micro) hover:bg-hover [&_svg]:size-3.5"
+            className="flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-[13px] font-medium text-accent transition-colors duration-(--dur-micro) hover:bg-hover [&_svg]:size-3.5 [&_svg]:transition-transform [&_svg]:duration-(--dur-short) [&_svg]:ease-(--ease-out) hover:[&_svg]:translate-x-0.5"
           >
             Keep this as my first project
             <ArrowRight />
@@ -174,10 +174,10 @@ export function LiveDemo() {
         </div>
       </div>
 
-      <div className="relative flex min-w-0 flex-col border-t border-line-strong bg-surface-2 xl:border-l xl:border-t-0">
+      <div className="flex min-w-0 flex-col border-t border-line-strong bg-surface-2 xl:border-l xl:border-t-0">
         <PaneHead name="Report page" hint="Updates as you type" />
-        {/* Side by side the page scrolls in its pane; stacked it is shown whole. */}
-        <div className="px-4 py-5 sm:p-7 xl:absolute xl:inset-x-0 xl:bottom-0 xl:top-11 xl:overflow-y-auto">
+        {/* The page is shown whole, and sets the height of the editor beside it. */}
+        <div className="px-4 py-5 sm:p-7">
           <ReportSheet
             title={title}
             score={score}

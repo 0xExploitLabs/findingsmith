@@ -92,7 +92,7 @@ export function ReportSheet({
             </span>
           ) : null}
         </div>
-        <h3 className="font-report-display text-[17px] font-bold leading-[1.22] text-ink">
+        <h3 className="font-report text-[17px] font-extrabold leading-[1.22] text-ink">
           {title || "Untitled finding"}
         </h3>
 
@@ -105,7 +105,7 @@ export function ReportSheet({
               <div className={LABEL}>{score.nomenclature}</div>
               <div
                 key={score.score}
-                className="animate-rise mt-[3px] font-report-display text-[22px] font-bold leading-[1.2] tabular-nums"
+                className="animate-rise mt-[3px] font-report text-[22px] font-extrabold leading-[1.2] tabular-nums"
                 style={{ color }}
               >
                 {formatScore(score.score)}
@@ -143,11 +143,11 @@ export function ReportSheet({
         ))}
 
         <div
-          className="absolute bottom-[28px] flex justify-between gap-4 text-[7.4px] leading-[1.2] text-sheet-faint"
+          className="absolute bottom-[28px] flex justify-between gap-4 text-[7.4px] leading-[1.2] text-ink-muted"
           style={{ insetInline: page.margin }}
         >
           <span>Kestrel Security&ensp;/&ensp;Version 1.0</span>
-          <span className="tabular-nums text-ink-muted">6 / 12</span>
+          <span className="tabular-nums">6 / 12</span>
         </div>
       </article>
     </div>

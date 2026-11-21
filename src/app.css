@@ -33,10 +33,11 @@
   font-weight: 700;
   font-display: swap;
 }
+/* The display cut, for titles and scores: the heaviest weight of the same family. */
 @font-face {
-  font-family: "Report Display";
+  font-family: "Report Sans";
   src: url("/fonts/pdf-sans-display.ttf") format("truetype");
-  font-weight: 700;
+  font-weight: 800;
   font-display: swap;
 }
 
@@ -48,9 +49,9 @@
 }
 
 /* ─────────────────────────────────────────────────────────────
-   0xExploitLabs tokens, as channel triplets so one value serves
-   both solid colours and alpha hairlines. Dark is the default;
-   light is its own palette, not an inversion.
+   Colour tokens, as channel triplets so one value serves both solid
+   colours and alpha hairlines. The page opens in light (index.html
+   sets data-scheme); dark is its own palette, not an inversion.
    ───────────────────────────────────────────────────────────── */
 :root {
   --brand-bg: 12 12 16;
@@ -146,8 +147,6 @@
   --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Instrument Serif", ui-serif, Georgia, serif;
   --font-report: "Report Sans", "Geist Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-report-display:
-    "Report Display", "Report Sans", "Geist Variable", ui-sans-serif, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
   --shadow-pop:
     0 1px 0 rgb(var(--brand-ink) / 0.06) inset, 0 18px 50px -12px rgb(var(--brand-shadow) / 0.55),
@@ -163,8 +162,6 @@
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
   /* Long travel: quick to leave, a long soft landing. */
   --ease-glide: cubic-bezier(0.22, 1, 0.36, 1);
-  /* A small overshoot, for things that pop into being. */
-  --ease-spring: cubic-bezier(0.34, 1.45, 0.64, 1);
   --dur-micro: 120ms;
   --dur-short: 220ms;
   --dur-medium: 420ms;
@@ -1038,7 +1035,7 @@
 .group:hover > .pixel-corner > i,
 .group:focus-within > .pixel-corner > i {
   transform: scale(1);
-  transition: transform var(--dur-medium) var(--ease-spring) calc(var(--n) * 38ms);
+  transition: transform var(--dur-medium) var(--ease-out) calc(var(--n) * 38ms);
 }
 .pixelated {
   image-rendering: pixelated;

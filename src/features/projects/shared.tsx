@@ -67,7 +67,7 @@ export function useProjectActions() {
         variant="primary"
         icon={<Plus />}
         onClick={() => setCreating(true)}
-        className="[&_svg]:transition-transform [&_svg]:duration-(--dur-medium) [&_svg]:ease-(--ease-spring) enabled:hover:[&_svg]:rotate-90"
+        className="[&_svg]:transition-transform [&_svg]:duration-(--dur-medium) [&_svg]:ease-(--ease-out) enabled:hover:[&_svg]:rotate-90"
       >
         New project
       </Button>
