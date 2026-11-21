@@ -21,7 +21,9 @@ import { tags as t } from "@lezer/highlight";
 import { useEffect, useRef } from "react";
 import { storeImage } from "../../data/assets";
 import { toast } from "../../ui/toast";
-import { livePreview } from "./livePreview";
+import { CODE_LANGUAGES } from "./codeLang";
+import { livePreview, type SectionHints } from "./livePreview";
+import { focusTable, tableEditing } from "./table";
 
 /**
  * Colours for code inside fenced blocks, from the brand signal colours.
@@ -213,6 +215,8 @@ interface Block {
   cursor?: number;
   /** Wraps the cursor inside a line instead of starting a block of its own. */
   inline?: boolean;
+  /** A table: it needs clear lines around it, and the caret goes into its first cell. */
+  table?: boolean;
   icon: string;
 }
 
@@ -232,10 +236,11 @@ const ICON = {
   italic: '<path d="M19 4h-9M14 20H5M15 4 9 20"/>',
   link: '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>',
   request: '<path d="M3 7h13M12 3l4 4-4 4M21 17H8M12 13l-4 4 4 4"/>',
+  terminal: '<path d="m5 8 4 4-4 4M12 16h7"/>',
 };
 
 const FORMATTING: Block[] = [
-  { label: "Codeblock", detail: "```", insert: "```\n\n```", cursor: 4, icon: ICON.code },
+  { label: "Code block", detail: "```", insert: "```\n\n```", cursor: 4, icon: ICON.code },
   { label: "Heading 1", detail: "#", insert: "# ", icon: ICON.heading },
   { label: "Heading 2", detail: "##", insert: "## ", icon: ICON.heading },
   { label: "Heading 3", detail: "###", insert: "### ", icon: ICON.heading },
@@ -246,9 +251,9 @@ const FORMATTING: Block[] = [
   { label: "Task list", detail: "- [ ]", insert: "- [ ] ", icon: ICON.checks },
   {
     label: "Table",
-    detail: "| --- |",
+    detail: "2 by 2",
     insert: "| Column | Column |\n| --- | --- |\n|  |  |",
-    cursor: 36,
+    table: true,
     icon: ICON.table,
   },
   { label: "Quote", detail: ">", insert: "> ", icon: ICON.quote },
@@ -265,14 +270,16 @@ const FORMATTING: Block[] = [
   },
 ];
 
+/** A code block in each language, so "/bash" or "/json" is all it takes. */
+const CODE: Block[] = CODE_LANGUAGES.map((l) => ({
+  label: `${l.label} code`,
+  detail: `\`\`\`${l.id}`,
+  insert: `\`\`\`${l.id}\n\n\`\`\``,
+  cursor: l.id.length + 4,
+  icon: l.id === "http" ? ICON.request : l.id === "bash" ? ICON.terminal : ICON.code,
+}));
+
 const EVIDENCE: Block[] = [
-  {
-    label: "HTTP request",
-    detail: "```http",
-    insert: "```http\n\n```",
-    cursor: 8,
-    icon: ICON.request,
-  },
   {
     label: "Request and response",
     detail: "two blocks",
@@ -282,10 +289,27 @@ const EVIDENCE: Block[] = [
   },
 ];
 
-const SECTIONS = [
-  { name: "Basic formatting", rank: 0 },
-  { name: "Evidence", rank: 1 },
-];
+/* The formatting entries come first and need no heading of their own. */
+const SECTIONS = {
+  code: { name: "Code blocks", rank: 1 },
+  evidence: { name: "Evidence", rank: 2 },
+};
+
+/**
+ * Puts a table where the slash command was typed and the caret in its first
+ * cell. A table takes every line that follows it as a row, so it is given an
+ * empty line on both sides.
+ */
+function insertTable(view: EditorView, from: number, to: number, table: string) {
+  const { doc } = view.state;
+  const line = doc.lineAt(from);
+  const above = line.number > 1 ? doc.line(line.number - 1).text : "";
+  const below = line.number < doc.lines ? doc.line(line.number + 1).text : "";
+  const lead = /\S/.test(line.text.slice(0, from - line.from)) ? "\n\n" : above.trim() ? "\n" : "";
+  const tail = `${doc.sliceString(to, line.to).trim() ? "\n\n" : ""}${below.trim() ? "\n" : ""}`;
+  view.dispatch({ changes: { from, to, insert: lead + table + tail }, userEvent: "input" });
+  focusTable(view, from + lead.length);
+}
 
 /** The icon of a slash-menu entry, kept beside the completion it belongs to. */
 const icons = new WeakMap<Completion, string>();
@@ -307,18 +331,22 @@ function slashMenu(onImage: () => void) {
     const slash = word.from + word.text.indexOf("/");
     const line = ctx.state.doc.lineAt(slash);
     const midLine = /\S/.test(line.text.slice(0, slash - line.from));
-    const entry = (b: Block, section: number, i: number): Completion => {
+    const entry = (b: Block, section: Completion["section"], i: number): Completion => {
       const completion: Completion = {
         label: b.label,
         detail: b.detail,
-        section: SECTIONS[section],
+        section,
         // Keep the menu in this order instead of alphabetical.
-        boost: 50 - i,
+        boost: 60 - i,
         apply: (view, _c, _from, to) => {
+          if (b.table) return insertTable(view, slash, to, b.insert);
           // A block asked for in the middle of a line starts on a line of its own.
           const lead = midLine && !b.inline ? "\n" : "";
+          // One of several lines keeps the text after the cursor on a line of its own.
+          const rest = view.state.sliceDoc(to, view.state.doc.lineAt(to).to);
+          const tail = b.insert.includes("\n") && rest.trim() ? "\n" : "";
           view.dispatch({
-            changes: { from: slash, to, insert: lead + b.insert },
+            changes: { from: slash, to, insert: lead + b.insert + tail },
             selection: { anchor: slash + lead.length + (b.cursor ?? b.insert.length) },
           });
         },
@@ -329,7 +357,7 @@ function slashMenu(onImage: () => void) {
     const image: Completion = {
       label: "Image",
       detail: "or paste",
-      section: SECTIONS[1],
+      section: SECTIONS.evidence,
       boost: 0,
       apply: (view, _c, _from, to) => {
         view.dispatch({ changes: { from: slash, to, insert: "" } });
@@ -338,8 +366,9 @@ function slashMenu(onImage: () => void) {
     };
     icons.set(image, ICON.image);
     const options = [
-      ...FORMATTING.map((b, i) => entry(b, 0, i)),
-      ...EVIDENCE.map((b, i) => entry(b, 1, FORMATTING.length + i)),
+      ...FORMATTING.map((b, i) => entry(b, undefined, i)),
+      ...CODE.map((b, i) => entry(b, SECTIONS.code, FORMATTING.length + i)),
+      ...EVIDENCE.map((b, i) => entry(b, SECTIONS.evidence, FORMATTING.length + CODE.length + i)),
       image,
     ];
     return { from: slash + 1, options, filter: true, validFor: /^[\w ]*$/ };
@@ -369,6 +398,7 @@ export function DocEditor({
   label,
   autoFocus,
   controller,
+  hints,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -377,6 +407,8 @@ export function DocEditor({
   label: string;
   autoFocus?: boolean;
   controller?: React.RefObject<DocController | null>;
+  /** What to write under each `##` heading while its section is empty, by heading. */
+  hints?: SectionHints;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
@@ -397,7 +429,8 @@ export function DocEditor({
           EditorView.lineWrapping,
           markdown({ base: markdownLanguage, codeLanguages: languages, addKeymap: false }),
           syntaxHighlighting(codeColours),
-          livePreview(),
+          livePreview(hints),
+          tableEditing(),
           autoCloseFence,
           search({ top: true }),
           autocompletion({
@@ -405,7 +438,7 @@ export function DocEditor({
             icons: false,
             closeOnBlur: true,
             addToOptions: [{ render: renderIcon, position: 20 }],
-            maxRenderedOptions: 40,
+            maxRenderedOptions: 60,
           }),
           placeholderExt(placeholder ?? ""),
           EditorView.contentAttributes.of({

@@ -39,6 +39,16 @@ async function blankFinding(page: Page, title: string) {
   await page.getByLabel("Title").fill(title);
 }
 
+/** Types a slash command and takes the one entry it narrows the menu down to. */
+async function slash(page: Page, command: string) {
+  const options = page.locator(".cm-tooltip-autocomplete").getByRole("option");
+  await page.keyboard.type("/");
+  await expect(options.first()).toBeVisible();
+  await page.keyboard.type(command);
+  await expect(options).toHaveCount(1);
+  await page.keyboard.press("Enter");
+}
+
 test("the overview ends on the typeset page and a footer that leads on", async ({ page }) => {
   await page.goto("/");
   const footer = page.getByRole("contentinfo");
@@ -218,12 +228,100 @@ test("typing / opens a menu of blocks, filtered as you type", async ({ page }) =
   await editor.locator(".cm-line").nth(2).click();
   await page.keyboard.type("/");
   const menu = page.locator(".cm-tooltip-autocomplete");
-  await expect(menu).toContainText("Basic formatting");
+  // The formatting entries lead without a heading; the later groups keep theirs.
   await expect(menu.getByRole("option", { name: /Heading 1/ })).toBeVisible();
+  await expect(menu).not.toContainText("Basic formatting");
+  await expect(menu).toContainText("Code blocks");
   await page.keyboard.type("tab");
   await expect(menu.getByRole("option")).toHaveCount(1);
+  await expect(menu.getByRole("option", { name: /Table/ })).toBeVisible();
+});
+
+test("/table is a table at once, filled in cell by cell with no Markdown in sight", async ({
+  page,
+}) => {
+  await newProject(page);
+  await blankFinding(page, "Tables");
+  const editor = page.locator("article .cm-content");
+  await editor.locator(".cm-line").nth(2).click();
+  await slash(page, "table");
+
+  // The grid is there without moving the cursor away, and the caret is in its first cell.
+  const table = editor.locator(".cm-lp-table table");
+  await expect(table).toBeVisible();
+  await expect(page.getByLabel("Column 1 heading")).toBeFocused();
+  await expect(editor).not.toContainText("|");
+
+  await page.keyboard.type("Target");
+  await page.keyboard.press("Tab");
+  await page.keyboard.type("Notes");
+  await page.keyboard.press("Tab");
+  await page.keyboard.type("app.example.com");
+  await page.keyboard.press("Tab");
+  await page.keyboard.type("Production");
+  // Tab in the last cell starts a new row.
+  await page.keyboard.press("Tab");
+  await page.keyboard.type("api.example.com");
+  await expect(page.getByLabel("Row 2, column 1")).toBeFocused();
+  await expect(table.locator("tr")).toHaveCount(3);
+  await expect(editor).not.toContainText("|");
+
+  // Undo works from inside a cell, and Escape goes back to the text below.
+  await page.keyboard.press("Control+z");
+  await expect(page.getByLabel("Row 2, column 1")).toHaveText("api.example.co");
+  await page.keyboard.press("Control+Shift+z");
+  await page.keyboard.press("Escape");
+  await page.keyboard.type("Out of scope: third-party services.");
+  await expect(table.locator("tr")).toHaveCount(3);
+  await expect(
+    editor.locator(".cm-line", { hasText: "Out of scope: third-party services." }),
+  ).toBeVisible();
+
+  await page.getByLabel("Row 2, column 2").click();
+  await page.getByRole("button", { name: "Add column" }).click();
+  await page.keyboard.type("Owner");
+  await expect(table.locator("th")).toHaveText(["Target", "Notes", "Owner"]);
+  await page.getByLabel("Row 2, column 1").click();
+  await page.getByRole("button", { name: "Delete row" }).click();
+  await expect(table.locator("tr")).toHaveCount(2);
+
+  // What was saved is an ordinary Markdown table: it comes back the same after a reload.
+  await expect(page.locator("#project-nav [role=status] .animate-spin")).toHaveCount(0);
+  await page.reload();
+  const saved = page.locator("article .cm-lp-table table");
+  await expect(saved.locator("th")).toHaveText(["Target", "Notes", "Owner"]);
+  await expect(saved.locator("td")).toHaveText(["app.example.com", "Production", ""]);
+});
+
+test("a code block names its language and lets you change it", async ({ page }) => {
+  await newProject(page);
+  await blankFinding(page, "Code blocks");
+  const editor = page.locator("article .cm-content");
+  await editor.locator(".cm-line").nth(2).click();
+  await slash(page, "python");
+  await page.keyboard.type("print(1)");
+  await expect(page.getByRole("button", { name: "Code language: Python" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Code language: Python" }).click();
+  await expect(page.getByRole("option", { name: "Python" })).toBeVisible();
+  await page.getByLabel("Search languages").fill("bas");
   await page.keyboard.press("Enter");
-  await expect(editor).toContainText("| --- | --- |");
+  await expect(page.getByRole("button", { name: "Code language: Bash" })).toBeVisible();
+
+  // Away from the block the fences are hidden and the name stays on it.
+  await page.getByLabel("Title", { exact: true }).click();
+  await expect(editor).not.toContainText("```");
+  await expect(editor.locator(".cm-lp-open")).toContainText("Bash");
+
+  // A block typed by hand without a language is plain text until one is picked.
+  await editor.locator(".cm-line", { hasText: /^1\.\s*$/ }).click();
+  await page.keyboard.press("End");
+  await page.keyboard.type(" Run it:");
+  await page.keyboard.press("Enter");
+  await page.keyboard.type("```");
+  await page.getByRole("button", { name: "Code language: Plain text" }).click();
+  await page.getByRole("option", { name: "JSON" }).click();
+  await expect(page.getByRole("button", { name: "Code language: JSON" })).toBeVisible();
 });
 
 test("a project can be renamed and duplicated from the projects page", async ({ page }) => {
