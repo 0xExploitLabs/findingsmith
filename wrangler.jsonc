@@ -1,6 +1,7 @@
 // Cloudflare serves the built site as static files: there is no server code.
 // Cloudflare's Git integration runs `pnpm build`, then `npx wrangler deploy`,
-// which reads this file and uploads `dist/`.
+// which reads this file and uploads `dist/`. Each deploy applies what is set
+// here, so the address settings live here rather than in the dashboard.
 {
   "name": "findingsmith",
   "compatibility_date": "2026-11-01",
@@ -8,5 +9,11 @@
     "directory": "./dist",
     // Every address is the one page; its routes live after the "#".
     "not_found_handling": "single-page-application"
-  }
+  },
+  // The site is served on its own address only. The zone has a proxied DNS
+  // record for the subdomain, which a route needs to receive requests.
+  "routes": [{ "pattern": "findingsmith.0xexploitlabs.org/*", "zone_name": "0xexploitlabs.org" }],
+  // No workers.dev address, for the live site or for previews.
+  "workers_dev": false,
+  "preview_urls": false
 }
