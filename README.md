@@ -84,7 +84,7 @@ They use Playwright's Chromium; to use one already installed, set `CHROMIUM_PATH
 src/domain      types, CVSS scoring, severity rules
 src/data        IndexedDB storage, images, import and export, the finding library
 src/markdown    Markdown parsing, highlighting and section splitting
-src/features    the screens: projects, the editor, the CVSS calculator, the report
+src/features    the screens: projects, the editor, the finding library, the report
 src/pdf         the PDF report, laid out with react-pdf
 patches         two small fixes to react-pdf, applied by pnpm
 ```
