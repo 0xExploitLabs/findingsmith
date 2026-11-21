@@ -31,7 +31,7 @@ export function SeverityMix({
         <div
           role="img"
           aria-label={present.map((s) => `${counts[s]} ${s}`).join(", ")}
-          className="flex h-1.5 gap-px overflow-hidden rounded-full"
+          className="grow-x flex h-1.5 gap-px overflow-hidden rounded-full"
         >
           {present.map((s) => (
             <span key={s} className={SEVERITY_CLASS[s].dot} style={{ flex: counts[s] }} />
