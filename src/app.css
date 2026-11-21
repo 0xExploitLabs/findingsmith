@@ -124,6 +124,7 @@
     0 28px 56px -28px rgb(var(--brand-shadow) / 0.55);
   --animate-in: pop-in var(--dur-micro) var(--ease-out);
   --animate-fade: fade-in var(--dur-short) var(--ease-out);
+  --animate-rise: rise var(--dur-short) var(--ease-out) both;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
   --dur-micro: 120ms;
@@ -134,6 +135,37 @@
   from {
     opacity: 0;
     transform: translateY(4px) scale(0.985);
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* Plotted line work: strokes draw themselves, as a pen plotter would. A path
+   needs pathLength="1"; --d delays it and --t sets how long it takes. */
+@keyframes plot {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+
+@keyframes plot-loop {
+  0% {
+    stroke-dashoffset: 1;
+  }
+  55%,
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
   }
 }
 
@@ -646,12 +678,29 @@
   padding-top: 8px;
 }
 
+.plot {
+  stroke-dasharray: 1;
+  animation: plot var(--t, 0.8s) var(--ease-out) var(--d, 0s) both;
+}
+.plot-loop {
+  stroke-dasharray: 1;
+  animation: plot-loop 1.8s var(--ease-out) var(--d, 0s) infinite both;
+}
+.fade-late {
+  animation: fade-in var(--t, 0.5s) var(--ease-out) var(--d, 0s) both;
+}
+.grow-x {
+  transform-origin: left center;
+  animation: grow-x 0.6s var(--ease-out) var(--d, 0s) both;
+}
+
 /* Unlayered, so it wins over every Tailwind utility without !important. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms;
+    animation-delay: 0s;
     animation-iteration-count: 1;
     transition-duration: 0.01ms;
     scroll-behavior: auto;
