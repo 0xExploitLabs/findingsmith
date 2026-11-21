@@ -89,11 +89,16 @@
   --color-glow: rgb(var(--brand-glow));
   --color-line: rgb(var(--brand-ink) / var(--line-alpha));
   --color-line-strong: rgb(var(--brand-ink) / calc(var(--line-alpha) * 1.8));
+  --color-line-hover: rgb(var(--brand-ink) / 0.2);
   --color-hover: rgb(var(--brand-ink) / 0.045);
   --color-press: rgb(var(--brand-ink) / 0.08);
   --color-ok: rgb(var(--brand-signal-add));
   --color-warn: rgb(var(--brand-signal-warn));
   --color-danger: rgb(var(--brand-signal-drop));
+  --color-danger-line: rgb(var(--brand-signal-drop) / 0.35);
+  --color-danger-soft: rgb(var(--brand-signal-drop) / 0.1);
+  --color-danger-soft-hover: rgb(var(--brand-signal-drop) / 0.18);
+  --color-scrim: rgb(var(--brand-bg) / 0.72);
   --color-sev-critical: rgb(var(--sev-critical));
   --color-sev-high: rgb(var(--sev-high));
   --color-sev-medium: rgb(var(--sev-medium));

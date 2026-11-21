@@ -36,15 +36,14 @@ export function Button({
       type="button"
       {...rest}
       className={cx(
-        "inline-flex select-none items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-[background,color,border,box-shadow] duration-150 disabled:opacity-45 [&_svg]:size-4 [&_svg]:shrink-0",
+        "inline-flex select-none items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-[background-color,color,border-color,transform] duration-(--dur-micro) ease-(--ease-out) enabled:active:translate-y-px disabled:cursor-not-allowed disabled:opacity-55 [&_svg]:size-4 [&_svg]:shrink-0",
         size === "sm" ? "h-8 px-3 text-[13px]" : "h-9 px-3.5 text-[13.5px]",
-        variant === "primary" &&
-          "bg-accent text-ink-inverse shadow-[0_0_0_1px_rgb(var(--brand-accent)/0.4),0_6px_20px_-8px_rgb(var(--brand-accent)/0.7)] hover:bg-accent-deep enabled:active:translate-y-px",
+        variant === "primary" && "bg-accent text-ink-inverse enabled:hover:bg-accent-deep",
         variant === "secondary" &&
-          "border border-line-strong bg-surface-2 text-ink hover:border-[rgb(var(--brand-ink)/0.2)] hover:bg-surface-3",
-        variant === "ghost" && "text-ink-muted hover:bg-hover hover:text-ink",
+          "border border-line-strong bg-surface-2 text-ink enabled:hover:border-line-hover enabled:hover:bg-surface-3",
+        variant === "ghost" && "text-ink-muted enabled:hover:bg-hover enabled:hover:text-ink",
         variant === "danger" &&
-          "border border-[rgb(var(--brand-signal-drop)/0.35)] bg-[rgb(var(--brand-signal-drop)/0.1)] text-danger hover:bg-[rgb(var(--brand-signal-drop)/0.18)]",
+          "border border-danger-line bg-danger-soft text-danger enabled:hover:bg-danger-soft-hover",
         className,
       )}
     >
@@ -67,7 +66,7 @@ export function IconButton({
       title={label}
       {...rest}
       className={cx(
-        "inline-flex size-8 items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-hover hover:text-ink disabled:opacity-40 [&_svg]:size-4",
+        "inline-flex size-8 items-center justify-center rounded-lg text-ink-muted transition-colors duration-(--dur-micro) enabled:hover:bg-hover enabled:hover:text-ink enabled:active:bg-press disabled:cursor-not-allowed disabled:opacity-55 [&_svg]:size-4",
         className,
       )}
     >
@@ -90,7 +89,7 @@ export function TextInput({ className, ...rest }: InputHTMLAttributes<HTMLInputE
       {...noProofing}
       {...rest}
       className={cx(
-        "h-9 w-full rounded-lg border border-line-strong bg-surface-1 px-3 text-[13.5px] text-ink outline-none transition-colors placeholder:text-ink-faint hover:border-[rgb(var(--brand-ink)/0.2)] focus:border-accent focus:shadow-[0_0_0_3px_rgb(var(--brand-accent)/0.14)]",
+        "h-9 w-full rounded-lg border border-line-strong bg-surface-1 px-3 text-[13.5px] text-ink outline-none transition-colors duration-(--dur-micro) placeholder:text-ink-faint hover:border-line-hover focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-55",
         className,
       )}
     />
@@ -103,7 +102,7 @@ export function TextArea({ className, ...rest }: TextareaHTMLAttributes<HTMLText
       {...noProofing}
       {...rest}
       className={cx(
-        "w-full resize-y rounded-lg border border-line-strong bg-surface-1 px-3 py-2 text-[13.5px] leading-relaxed text-ink outline-none transition-colors placeholder:text-ink-faint hover:border-[rgb(var(--brand-ink)/0.2)] focus:border-accent focus:shadow-[0_0_0_3px_rgb(var(--brand-accent)/0.14)]",
+        "w-full resize-y rounded-lg border border-line-strong bg-surface-1 px-3 py-2 text-[13.5px] leading-relaxed text-ink outline-none transition-colors duration-(--dur-micro) placeholder:text-ink-faint hover:border-line-hover focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-55",
         className,
       )}
     />
@@ -166,13 +165,12 @@ export function SeverityBadge({ severity, className }: { severity: Severity; cla
   return (
     <span
       className={cx(
-        "inline-flex h-6 items-center gap-1.5 rounded-md border px-2 text-[11.5px] font-semibold uppercase tracking-[0.05em]",
+        "inline-flex h-6 items-center rounded-md border px-2 text-[12.5px] font-semibold",
         c.soft,
         c.text,
         className,
       )}
     >
-      <span className={cx("size-1.5 rounded-[2px]", c.dot)} />
       {severity}
     </span>
   );
@@ -311,7 +309,7 @@ export function Menu<T extends string>({
               className="z-[200] overflow-y-auto rounded-xl border border-line-strong bg-surface-2 p-1 shadow-pop outline-none animate-in"
             >
               {heading ? (
-                <div className="px-2.5 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-faint">
+                <div className="px-2.5 pb-1 pt-1.5 text-[12px] font-medium text-ink-faint">
                   {heading}
                 </div>
               ) : null}
@@ -448,7 +446,7 @@ export function Dialog({
         aria-label="Close dialog"
         tabIndex={-1}
         onClick={onClose}
-        className="absolute inset-0 cursor-default bg-[rgb(var(--brand-bg)/0.72)] backdrop-blur-[3px] animate-fade"
+        className="absolute inset-0 cursor-default bg-scrim backdrop-blur-[3px] animate-fade"
       />
       <div
         ref={panel}
