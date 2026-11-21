@@ -5,6 +5,22 @@ export type Severity = (typeof SEVERITIES)[number];
 export const STATUSES = ["Open", "Partially fixed", "Fixed", "Risk accepted"] as const;
 export type FindingStatus = (typeof STATUSES)[number];
 
+/**
+ * The properties a finding may state besides its severity and status, in the
+ * order the editor and the report list them.
+ */
+export const PROPERTIES = [
+  "cvss",
+  "endpoint",
+  "parameter",
+  "host",
+  "port",
+  "affected",
+  "cwe",
+  "cve",
+] as const;
+export type PropertyKey = (typeof PROPERTIES)[number];
+
 export const CLASSIFICATIONS = ["Confidential", "Restricted", "Internal", "Public"] as const;
 export type Classification = (typeof CLASSIFICATIONS)[number];
 
@@ -68,6 +84,11 @@ export interface Finding {
   port: string;
   /** Other affected hosts, URLs or components, one per line. */
   affected: string;
+  /**
+   * The properties this finding shows. Severity and status are always there;
+   * any other can be removed, and a removed one is empty in the report.
+   */
+  properties: PropertyKey[];
   /**
    * The write-up as one Markdown document. Each `## Heading` (Description,
    * Impact, Steps to reproduce, Remediation...) becomes a section in the report.

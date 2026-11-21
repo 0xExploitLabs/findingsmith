@@ -7,7 +7,7 @@ import type { Finding } from "./types";
  * words that follow "needs": "a title", "remediation". Empty when complete.
  */
 export function findingGaps(
-  finding: Pick<Finding, "title" | "body" | "cvss" | "manualSeverity">,
+  finding: Pick<Finding, "title" | "body" | "cvss" | "manualSeverity" | "properties">,
 ): string[] {
   const sections = splitSections(finding.body);
   return [
@@ -16,7 +16,11 @@ export function findingGaps(
     sections.length > 0 &&
       !findSection(sections, /remediat|recommend|fix|mitigat/i) &&
       "remediation",
-    !cvssOf(finding) && finding.manualSeverity !== "Info" && "a CVSS score",
+    // A finding rated without CVSS, by removing the property, is not asked for a score.
+    finding.properties.includes("cvss") &&
+      !cvssOf(finding) &&
+      finding.manualSeverity !== "Info" &&
+      "a CVSS score",
   ].filter((gap): gap is string => !!gap);
 }
 

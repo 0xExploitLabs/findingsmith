@@ -24,6 +24,11 @@ describe("what a finding still needs", () => {
     expect(findingGaps(finding)).not.toContain("a CVSS score");
   });
 
+  it("does not ask for a score once the CVSS property is removed", () => {
+    const finding = { ...createFinding("p", 0), properties: [] };
+    expect(findingGaps(finding)).not.toContain("a CVSS score");
+  });
+
   it("joins the gaps the way a sentence would", () => {
     expect(listInWords(["a title"])).toBe("a title");
     expect(listInWords(["a title", "a write-up", "a CVSS score"])).toBe(
