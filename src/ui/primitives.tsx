@@ -36,11 +36,12 @@ export function Button({
       type="button"
       {...rest}
       className={cx(
-        "inline-flex select-none items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-[background-color,color,border-color,transform] duration-(--dur-micro) ease-(--ease-out) enabled:active:translate-y-px disabled:cursor-not-allowed disabled:opacity-55 [&_svg]:size-4 [&_svg]:shrink-0",
+        "btn inline-flex select-none items-center justify-center gap-2 whitespace-nowrap rounded-[10px] font-medium disabled:cursor-not-allowed disabled:opacity-55 [&_svg]:size-4 [&_svg]:shrink-0",
         size === "sm" ? "h-8 px-3 text-[13px]" : "h-9 px-3.5 text-[13.5px]",
-        variant === "primary" && "bg-accent text-ink-inverse enabled:hover:bg-accent-deep",
+        variant === "primary" &&
+          "btn-primary bg-accent text-ink-inverse enabled:hover:bg-accent-deep",
         variant === "secondary" &&
-          "border border-line-strong bg-surface-2 text-ink enabled:hover:border-line-hover enabled:hover:bg-surface-3",
+          "btn-raised border border-line-strong bg-surface-1 text-ink enabled:hover:border-line-hover",
         variant === "ghost" && "text-ink-muted enabled:hover:bg-hover enabled:hover:text-ink",
         variant === "danger" &&
           "border border-danger-line bg-danger-soft text-danger enabled:hover:bg-danger-soft-hover",
@@ -66,7 +67,7 @@ export function IconButton({
       title={label}
       {...rest}
       className={cx(
-        "inline-flex size-8 items-center justify-center rounded-lg text-ink-muted transition-colors duration-(--dur-micro) enabled:hover:bg-hover enabled:hover:text-ink enabled:active:bg-press disabled:cursor-not-allowed disabled:opacity-55 [&_svg]:size-4",
+        "inline-flex size-8 items-center justify-center rounded-lg text-ink-muted transition-[background-color,color,scale] duration-(--dur-short) ease-(--ease-out) enabled:hover:bg-hover enabled:hover:text-ink enabled:active:scale-90 enabled:active:bg-press disabled:cursor-not-allowed disabled:opacity-55 [&_svg]:size-4",
         className,
       )}
     >

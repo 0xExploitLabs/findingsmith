@@ -135,6 +135,18 @@ export type CvssInput = { ok: true; cvss: CvssScore } | { ok: false; error: stri
  * a bare base score from another tool, such as "5.3".
  */
 export function readCvss(input: string): CvssInput {
+  const known = readings.get(input);
+  if (known) return known;
+  const read = readFresh(input);
+  // Scoring is the costly part and every list re-rates its findings on each render.
+  if (readings.size >= 500) readings.clear();
+  readings.set(input, read);
+  return read;
+}
+
+const readings = new Map<string, CvssInput>();
+
+function readFresh(input: string): CvssInput {
   const raw = input.trim();
   if (/^\d{1,2}(\.\d)?$/.test(raw)) {
     const score = Number(raw);

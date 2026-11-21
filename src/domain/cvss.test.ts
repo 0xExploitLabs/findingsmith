@@ -121,4 +121,10 @@ describe("severity follows the score", () => {
     expect(rate({ ...base, cvss: "" }).severity).toBe("Low");
     expect(rate({ ...base, cvss: "not a vector" }).severity).toBe("Low");
   });
+
+  it("reads a vector once: the same reading comes back for the same text", () => {
+    const vector = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H";
+    expect(readCvss(vector)).toBe(readCvss(vector));
+    expect(readCvss("not a vector")).toBe(readCvss("not a vector"));
+  });
 });

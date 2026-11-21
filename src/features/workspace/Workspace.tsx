@@ -1,5 +1,5 @@
 import { LoaderCircle, PanelLeft } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as db from "../../data/db";
 import { type LibraryEntry, libraryBody } from "../../data/library";
 import { compareFindings } from "../../domain/severity";
@@ -10,6 +10,7 @@ import { useConfirm } from "../../ui/Confirm";
 import { IconButton } from "../../ui/primitives";
 import { ThemeToggle } from "../../ui/ThemeToggle";
 import { toast } from "../../ui/toast";
+import { useEvent } from "../../ui/useEvent";
 import { FindingEditor } from "../finding/FindingEditor";
 import { LibraryDialog, type LibraryStart } from "../library/LibraryDialog";
 import { ReportView } from "../report/ReportView";
@@ -17,6 +18,8 @@ import { ProjectHome } from "./ProjectHome";
 import { ProjectPage } from "./ProjectPage";
 import { QuickSwitcher, SWITCHER_ICONS } from "./QuickSwitcher";
 import { Sidebar } from "./Sidebar";
+
+const SIDEBAR_KEY = "debrief-sidebar";
 
 export function Workspace({ route }: { route: Extract<Route, { projectId: string }> }) {
   const ws = useWorkspace(route.projectId);
@@ -27,15 +30,60 @@ export function Workspace({ route }: { route: Extract<Route, { projectId: string
   const { confirm, dialog } = useConfirm();
   const { project, findings } = ws;
 
+  // What the lists show of a finding. Typing a write-up changes none of it, so
+  // the same array is handed on and the sidebar is left alone.
+  const listedRef = useRef<Finding[]>([]);
+  const listed = useMemo(() => {
+    const before = listedRef.current;
+    const same =
+      before.length === findings.length &&
+      findings.every((f, i) => {
+        const b = before[i];
+        return (
+          b !== undefined &&
+          b.id === f.id &&
+          b.title === f.title &&
+          b.cvss === f.cvss &&
+          b.manualSeverity === f.manualSeverity &&
+          b.override === f.override &&
+          b.status === f.status &&
+          b.order === f.order
+        );
+      });
+    if (!same) listedRef.current = findings;
+    return listedRef.current;
+  }, [findings]);
+
+  const idPrefix = project?.idPrefix || "F";
   /** Reference numbers follow severity order, exactly as in the report. */
-  const refs = useMemo(() => {
-    const prefix = project?.idPrefix || "F";
-    return new Map(
-      [...findings]
-        .sort(compareFindings)
-        .map((f, i) => [f.id, `${prefix}-${String(i + 1).padStart(2, "0")}`]),
-    );
-  }, [findings, project?.idPrefix]);
+  const refs = useMemo(
+    () =>
+      new Map(
+        [...listed]
+          .sort(compareFindings)
+          .map((f, i) => [f.id, `${idPrefix}-${String(i + 1).padStart(2, "0")}`]),
+      ),
+    [listed, idPrefix],
+  );
+
+  // On a wide screen the sidebar folds to a rail; the choice is kept.
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem(SIDEBAR_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const toggleSidebar = useCallback(() => {
+    setCollapsed((was) => {
+      try {
+        localStorage.setItem(SIDEBAR_KEY, was ? "0" : "1");
+      } catch {
+        // Storage blocked: the choice still holds for this visit.
+      }
+      return !was;
+    });
+  }, []);
 
   const finding =
     route.name === "finding" ? findings.find((f) => f.id === route.findingId) : undefined;
@@ -58,7 +106,10 @@ export function Workspace({ route }: { route: Extract<Route, { projectId: string
   const open = (f: Finding) =>
     navigate({ name: "finding", projectId: route.projectId, findingId: f.id });
 
-  const addBlank = async () => open(await ws.addFinding());
+  const addBlank = useEvent(async () => open(await ws.addFinding()));
+  const openLibrary = useCallback(() => setLibrary({}), []);
+  const openSwitcher = useCallback(() => setSwitcherOpen(true), []);
+  const closeNav = useCallback(() => setNavOpen(false), []);
   const addFromLibrary = async (entry: LibraryEntry) => {
     setLibrary(null);
     const f = await ws.addFinding({
@@ -77,6 +128,10 @@ export function Workspace({ route }: { route: Extract<Route, { projectId: string
       if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setSwitcherOpen(true);
+      }
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key === "\\") {
+        e.preventDefault();
+        toggleSidebar();
       }
       if ((e.ctrlKey || e.metaKey) && e.altKey && e.key.toLowerCase() === "n") {
         e.preventDefault();
@@ -110,19 +165,22 @@ export function Workspace({ route }: { route: Extract<Route, { projectId: string
   }
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full bg-bg">
       <Sidebar
-        project={project}
-        findings={findings}
+        projectId={project.id}
+        projectName={project.name}
+        findings={listed}
         refs={refs}
         route={route}
         onNewFinding={addBlank}
-        onOpenLibrary={() => setLibrary({})}
+        onOpenLibrary={openLibrary}
         onReorder={ws.reorder}
-        onOpenSwitcher={() => setSwitcherOpen(true)}
+        onOpenSwitcher={openSwitcher}
         saveState={ws.saveState}
         open={navOpen}
-        onClose={() => setNavOpen(false)}
+        onClose={closeNav}
+        collapsed={collapsed}
+        onToggle={toggleSidebar}
       />
       {navOpen ? (
         <button
@@ -133,7 +191,7 @@ export function Workspace({ route }: { route: Extract<Route, { projectId: string
           className="fixed inset-0 z-30 cursor-default animate-fade bg-scrim backdrop-blur-[3px] md:hidden"
         />
       ) : null}
-      <main className="relative flex min-w-0 flex-1 flex-col">
+      <main className="page-glow relative flex min-w-0 flex-1 flex-col">
         <div className="flex h-12 shrink-0 items-center gap-1 border-b border-line bg-surface-1 pl-1.5 pr-2 md:hidden">
           <IconButton
             label="Open project menu"
@@ -229,57 +287,61 @@ export function Workspace({ route }: { route: Extract<Route, { projectId: string
           </div>
         )}
       </main>
-      <QuickSwitcher
-        open={switcherOpen}
-        onClose={() => setSwitcherOpen(false)}
-        findings={findings}
-        refs={refs}
-        onOpenFinding={open}
-        actions={[
-          {
-            id: "new",
-            label: "New blank finding",
-            icon: SWITCHER_ICONS.newFinding,
-            run: () => void addBlank(),
-          },
-          {
-            id: "library",
-            label: "Add a finding from the library",
-            icon: SWITCHER_ICONS.library,
-            run: () => setLibrary({}),
-          },
-          {
-            id: "overview",
-            label: "Project overview",
-            icon: SWITCHER_ICONS.project,
-            run: () => navigate({ name: "project", projectId: project.id, view: "overview" }),
-          },
-          {
-            id: "details",
-            label: "Report details: summary, scope and dates",
-            icon: SWITCHER_ICONS.details,
-            run: () => navigate({ name: "project", projectId: project.id, view: "details" }),
-          },
-          {
-            id: "export",
-            label: "Export PDF",
-            icon: SWITCHER_ICONS.export,
-            run: () => navigate({ name: "project", projectId: project.id, view: "report" }),
-          },
-          {
-            id: "projects",
-            label: "All projects",
-            icon: SWITCHER_ICONS.projects,
-            run: () => navigate({ name: "projects" }),
-          },
-        ]}
-      />
-      <LibraryDialog
-        open={library !== null}
-        start={library ?? undefined}
-        onClose={() => setLibrary(null)}
-        onUse={addFromLibrary}
-      />
+      {switcherOpen ? (
+        <QuickSwitcher
+          open
+          onClose={() => setSwitcherOpen(false)}
+          findings={findings}
+          refs={refs}
+          onOpenFinding={open}
+          actions={[
+            {
+              id: "new",
+              label: "New blank finding",
+              icon: SWITCHER_ICONS.newFinding,
+              run: () => void addBlank(),
+            },
+            {
+              id: "library",
+              label: "Add a finding from the library",
+              icon: SWITCHER_ICONS.library,
+              run: () => setLibrary({}),
+            },
+            {
+              id: "overview",
+              label: "Project overview",
+              icon: SWITCHER_ICONS.project,
+              run: () => navigate({ name: "project", projectId: project.id, view: "overview" }),
+            },
+            {
+              id: "details",
+              label: "Report details: summary, scope and dates",
+              icon: SWITCHER_ICONS.details,
+              run: () => navigate({ name: "project", projectId: project.id, view: "details" }),
+            },
+            {
+              id: "export",
+              label: "Export PDF",
+              icon: SWITCHER_ICONS.export,
+              run: () => navigate({ name: "project", projectId: project.id, view: "report" }),
+            },
+            {
+              id: "projects",
+              label: "All projects",
+              icon: SWITCHER_ICONS.projects,
+              run: () => navigate({ name: "projects" }),
+            },
+          ]}
+        />
+      ) : null}
+      {library !== null ? (
+        <LibraryDialog
+          open
+          start={library}
+          onClose={() => setLibrary(null)}
+          onUse={addFromLibrary}
+        />
+      ) : null}
       {dialog}
     </div>
   );

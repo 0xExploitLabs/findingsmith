@@ -13,7 +13,7 @@ import * as db from "../../data/db";
 import { download, exportProject, importProject, safeFilename } from "../../data/transfer";
 import { compareFindings, rate, SEVERITY_HEX } from "../../domain/severity";
 import type { Project } from "../../domain/types";
-import { isHexColor } from "../../pdf/palette";
+import { isHexColor, onColor } from "../../pdf/palette";
 import { href } from "../../state/router";
 import { useConfirm } from "../../ui/Confirm";
 import { PixelCorner } from "../../ui/motion";
@@ -225,31 +225,27 @@ function Card({
           className="stack-cover sheet absolute left-7 top-7 h-[240px] overflow-hidden bg-sheet shadow-page"
           style={{ right: 28 + pages.length * 10 }}
         >
-          <span className="absolute inset-y-0 left-0 w-[5px]" style={{ background: accent }} />
-          <span
-            className="absolute inset-y-0 left-[5px] w-[2px] opacity-40"
-            style={{ background: accent }}
-          />
-          <div className="pl-7 pr-5 pt-8">
-            <p
-              className="font-report text-[6.5px] font-bold uppercase leading-none tracking-[1.4px]"
-              style={{ color: accent }}
-            >
+          {/* The cover in miniature: a white head, then the block of colour with the title. */}
+          <div className="flex h-[22px] items-center justify-between px-4">
+            <span className="h-[3px] w-10 rounded-full bg-sheet-rule" />
+            <span className="h-[7px] w-9 rounded-[2px] border" style={{ borderColor: accent }} />
+          </div>
+          <div className="h-full px-4 pt-7" style={{ background: accent, color: onColor(accent) }}>
+            <p className="font-report text-[6.5px] font-bold uppercase leading-none tracking-[1.4px] opacity-80">
               Penetration test report
             </p>
-            <p className="mt-2 line-clamp-2 font-report text-[15px] font-extrabold leading-[1.15] text-sheet-ink">
+            <p className="mt-2 line-clamp-2 font-report text-[15px] font-extrabold leading-[1.15]">
               {name}
             </p>
             {project.client ? (
-              <p className="mt-1.5 truncate font-report text-[8.5px] text-sheet-muted">
+              <p className="mt-1.5 truncate font-report text-[8.5px] opacity-85">
                 {project.client}
               </p>
             ) : null}
-            <span className="mt-3 block h-[2px] w-6" style={{ background: accent }} />
           </div>
         </div>
       </div>
-      <PixelCorner />
+      <PixelCorner corner="br" />
 
       <div className="flex flex-1 flex-col p-5">
         <a
@@ -280,7 +276,7 @@ function Card({
           <a
             href={href({ name: "project", projectId: project.id, view: "report" })}
             aria-label={`Report for ${name}`}
-            className="flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg border border-line-strong bg-surface-2 px-2.5 text-[13px] text-ink transition-colors duration-(--dur-micro) hover:border-line-hover hover:bg-surface-3 [&_svg]:size-4"
+            className="btn btn-raised flex h-8 items-center gap-1.5 whitespace-nowrap rounded-[10px] border border-line-strong bg-surface-1 px-2.5 text-[13px] text-ink hover:border-line-hover [&_svg]:size-4"
           >
             <FileText />
             Report
