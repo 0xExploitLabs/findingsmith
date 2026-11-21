@@ -55,12 +55,14 @@ const REACH = 150;
  * A slow field of large pixels, in a few strengths of one colour, like weather
  * seen at very low resolution. It drifts on its own, slides a little as the
  * page scrolls, and parts around the pointer, which leaves a ring behind it.
- * One small canvas, scaled up unsmoothed.
+ * Its solid parts are alive too: patches of a lighter or deeper step pass
+ * through them and single pixels twinkle. One small canvas, scaled up unsmoothed.
  */
 export function PixelField({
   shape,
   cell = 22,
   tone = "accent",
+  still = false,
   className,
 }: {
   shape: FieldShape;
@@ -68,6 +70,8 @@ export function PixelField({
   cell?: number;
   /** "accent" on the page colour; "inverse" is a faint texture on an accent ground. */
   tone?: "accent" | "inverse";
+  /** Drawn once and left alone: a texture behind a page that is being worked on. */
+  still?: boolean;
   className?: string;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -84,7 +88,15 @@ export function PixelField({
       .split(/\s+/)
       .map(Number);
     const strength = tone === "accent" ? 1 : 0.2;
-    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const frozen = still || matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // Where the field is solid it is not flat: slow patches a step lighter or
+    // deeper drift through it, and single pixels light up and go out.
+    const lift = [255, 255, 255];
+    const sink = getComputedStyle(canvas)
+      .getPropertyValue("--brand-on-field")
+      .trim()
+      .split(/\s+/)
+      .map(Number);
     let frame = 0;
     let last = 0;
     let visible = true;
@@ -107,6 +119,7 @@ export function PixelField({
       const t = time / 9000;
       const drift = top / 900;
       const blink = Math.floor(time / 640);
+      const twinkle = Math.floor(time / 900);
       for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols; x++) {
           const n =
@@ -123,10 +136,21 @@ export function PixelField({
           let alpha = value > 0.92 ? 255 : value > 0.78 ? 150 : value > 0.66 ? 70 : 0;
           // Loose pixels flicker at the field's edge, where it is thinning out.
           if (!alpha && base > 0.12 && value > 0.4 && hash(x, y, blink) > 0.93) alpha = 46;
+          // A shade for solid cells: positive mixes toward light, negative toward the field's ink.
+          let shade = 0;
+          if (alpha === 255 && tone === "accent") {
+            const w = noise(x * 0.07 - t * 0.8, y * 0.09 + t * 0.5, t * 1.3);
+            shade = w > 0.7 ? 0.2 : w > 0.61 ? 0.1 : w < 0.3 ? -0.12 : w < 0.38 ? -0.06 : 0;
+            const spark = hash(x, y, twinkle);
+            if (spark > 0.988) shade = 0.34;
+            else if (spark < 0.008) shade = -0.2;
+          }
+          const toward = shade > 0 ? lift : sink;
+          const mixed = Math.abs(shade);
           const i = (y * cols + x) * 4;
-          image.data[i] = rgb[0] ?? 0;
-          image.data[i + 1] = rgb[1] ?? 0;
-          image.data[i + 2] = rgb[2] ?? 0;
+          image.data[i] = (rgb[0] ?? 0) + ((toward[0] ?? 0) - (rgb[0] ?? 0)) * mixed;
+          image.data[i + 1] = (rgb[1] ?? 0) + ((toward[1] ?? 0) - (rgb[1] ?? 0)) * mixed;
+          image.data[i + 2] = (rgb[2] ?? 0) + ((toward[2] ?? 0) - (rgb[2] ?? 0)) * mixed;
           image.data[i + 3] = alpha * strength;
         }
       }
@@ -170,7 +194,7 @@ export function PixelField({
     seen.observe(canvas);
     const resized = new ResizeObserver(() => draw(last));
     resized.observe(canvas);
-    if (!still) {
+    if (!frozen) {
       frame = requestAnimationFrame(tick);
       window.addEventListener("pointermove", onPointer, { passive: true });
       document.documentElement.addEventListener("pointerleave", onLeave);
@@ -182,7 +206,7 @@ export function PixelField({
       window.removeEventListener("pointermove", onPointer);
       document.documentElement.removeEventListener("pointerleave", onLeave);
     };
-  }, [shape, cell, tone, scheme]);
+  }, [shape, cell, tone, still, scheme]);
 
   return (
     <div aria-hidden="true" className={cx("size-full", className)}>
