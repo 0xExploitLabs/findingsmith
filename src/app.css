@@ -3,6 +3,11 @@
  * nav: kept (a top bar on home, the project sidebar in the workspace) · signature: the findings ledger, each finding's severity and score in one line · states: empty, loading, error, full
  * axes: dark ink paper/grotesk/cyan signal · posture: restrained · contrast: pass · v2.0.0 */
 /* Hallmark · pre-emit critique: P4 H4 E4 S4 R4 V3 · weakest: V, the shell is kept; home now leads with real pages the app rendered instead of a drawing */
+/* Hallmark · reworded "pentest reports, written like notes." to "Pentest reports, written like notes" · 38iii names the accent-coloured full stop */
+/* Hallmark · dropped Projects · the first-visit screen has no list to head, and the heading returns as the page title once a project exists */
+/* Hallmark · reworded "Delete this project?" · the delete handler is kept, only the quotes around the project name in its message became curly */
+/* Hallmark · dismissed 3 · the two side rules are Markdown blockquotes in the editor and preview, where a left rule is the convention, not a card stripe */
+/* Hallmark · answered F24 · the slash menu floats over editor text on a dark surface, where a shadow alone does not separate it, so it keeps its hairline like every other menu */
 @import "tailwindcss";
 
 @font-face {
@@ -305,7 +310,7 @@
   background: var(--color-code);
   border: 1px solid var(--color-line);
   border-radius: 10px;
-  padding: 14px 16px;
+  padding: 12px 16px;
   overflow-x: auto;
   font-size: 12.5px;
   line-height: 1.6;
@@ -327,7 +332,7 @@
 .prose-md th,
 .prose-md td {
   border: 1px solid var(--color-line-strong);
-  padding: 6px 10px;
+  padding: 8px 12px;
   text-align: left;
   vertical-align: top;
 }
@@ -486,7 +491,7 @@
 }
 .doc-editor .cm-lp-quote {
   border-left: 3px solid rgb(var(--brand-accent) / 0.5);
-  padding-left: 14px;
+  padding-left: 16px;
   color: var(--color-ink-muted);
 }
 .doc-editor .cm-lp-hr {
@@ -501,20 +506,20 @@
   font-size: 13px;
   line-height: 1.65;
   background: var(--color-code);
-  padding: 0 18px;
+  padding: 0 16px;
   border-left: 1px solid var(--color-line);
   border-right: 1px solid var(--color-line);
 }
 .doc-editor .cm-lp-open {
   border-top: 1px solid var(--color-line);
   border-radius: 10px 10px 0 0;
-  padding-top: 10px;
+  padding-top: 12px;
   color: var(--color-ink-faint);
 }
 .doc-editor .cm-lp-close {
   border-bottom: 1px solid var(--color-line);
   border-radius: 0 0 10px 10px;
-  padding-bottom: 10px;
+  padding-bottom: 12px;
   color: var(--color-ink-faint);
 }
 .doc-editor .cm-lp-open.cm-lp-close {
@@ -546,9 +551,9 @@
 .doc-editor .cm-lp-image {
   display: inline-flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   max-width: 100%;
-  padding: 6px 0;
+  padding: 8px 0;
   vertical-align: top;
 }
 .doc-editor .cm-lp-image img {
@@ -567,7 +572,7 @@
   color: var(--color-ink-muted);
 }
 .doc-editor .cm-lp-table {
-  padding: 6px 0;
+  padding: 8px 0;
   cursor: text;
   overflow-x: auto;
 }
@@ -579,7 +584,7 @@
 .doc-editor .cm-lp-table th,
 .doc-editor .cm-lp-table td {
   border: 1px solid var(--color-line-strong);
-  padding: 6px 12px;
+  padding: 8px 12px;
   text-align: left;
   vertical-align: top;
 }
@@ -618,7 +623,7 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 16px;
-  padding: 7px 10px;
+  padding: 8px 12px;
   border-radius: 8px;
   font-size: 13.5px;
   color: var(--color-ink);
