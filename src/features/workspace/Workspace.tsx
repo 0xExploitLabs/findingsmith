@@ -58,7 +58,7 @@ export function Workspace({ route }: { route: Extract<Route, { projectId: string
       body: libraryBody(entry),
     });
     open(f);
-    toast(`Added "${entry.title}"`);
+    toast(`Added “${entry.title}”`);
   };
 
   useEffect(() => {
@@ -141,7 +141,7 @@ export function Workspace({ route }: { route: Extract<Route, { projectId: string
                 onDelete={() =>
                   confirm({
                     title: "Delete this finding?",
-                    body: `"${finding.title || "Untitled finding"}" will be removed from the project. This cannot be undone.`,
+                    body: `“${finding.title || "Untitled finding"}” will be removed from the project. This cannot be undone.`,
                     action: "Delete finding",
                     onConfirm: async () => {
                       await ws.removeFinding(finding.id);
@@ -159,7 +159,7 @@ export function Workspace({ route }: { route: Extract<Route, { projectId: string
                 onDelete={() =>
                   confirm({
                     title: "Delete this project?",
-                    body: `"${project.name || "Untitled project"}", its ${findings.length} findings and all screenshots will be removed from this browser. Export it first if you may need it again.`,
+                    body: `“${project.name || "Untitled project"}”, its ${findings.length} findings and all screenshots will be removed from this browser. Export it first if you may need it again.`,
                     action: "Delete project",
                     onConfirm: async () => {
                       await db.deleteProject(project.id);
