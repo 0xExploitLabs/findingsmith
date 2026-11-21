@@ -124,52 +124,57 @@ export function Workspace({ route }: { route: Extract<Route, { projectId: string
             className="min-h-0 flex-1 overflow-y-auto"
             key={route.name === "finding" ? route.findingId : "overview"}
           >
-            {finding ? (
-              <FindingEditor
-                finding={finding}
-                reference={refs.get(finding.id) ?? ""}
-                onChange={(patch) => ws.updateFinding(finding.id, patch)}
-                onDuplicate={async () => {
-                  const { id: _id, createdAt: _c, updatedAt: _u, order: _o, ...rest } = finding;
-                  const copy = await ws.addFinding({
-                    ...rest,
-                    title: `${finding.title} (copy)`.trim(),
-                  });
-                  open(copy);
-                  toast("Finding duplicated");
-                }}
-                onDelete={() =>
-                  confirm({
-                    title: "Delete this finding?",
-                    body: `“${finding.title || "Untitled finding"}” will be removed from the project. This cannot be undone.`,
-                    action: "Delete finding",
-                    onConfirm: async () => {
-                      await ws.removeFinding(finding.id);
-                      navigate({ name: "project", projectId: project.id, view: "overview" }, true);
-                      toast("Finding deleted");
-                    },
-                  })
-                }
-              />
-            ) : (
-              <ProjectPage
-                project={project}
-                findings={findings}
-                onChange={ws.updateProject}
-                onDelete={() =>
-                  confirm({
-                    title: "Delete this project?",
-                    body: `“${project.name || "Untitled project"}”, its ${findings.length} findings and all screenshots will be removed from this browser. Export it first if you may need it again.`,
-                    action: "Delete project",
-                    onConfirm: async () => {
-                      await db.deleteProject(project.id);
-                      navigate({ name: "home" }, true);
-                      toast("Project deleted");
-                    },
-                  })
-                }
-              />
-            )}
+            <div className="min-h-full animate-rise">
+              {finding ? (
+                <FindingEditor
+                  finding={finding}
+                  reference={refs.get(finding.id) ?? ""}
+                  onChange={(patch) => ws.updateFinding(finding.id, patch)}
+                  onDuplicate={async () => {
+                    const { id: _id, createdAt: _c, updatedAt: _u, order: _o, ...rest } = finding;
+                    const copy = await ws.addFinding({
+                      ...rest,
+                      title: `${finding.title} (copy)`.trim(),
+                    });
+                    open(copy);
+                    toast("Finding duplicated");
+                  }}
+                  onDelete={() =>
+                    confirm({
+                      title: "Delete this finding?",
+                      body: `“${finding.title || "Untitled finding"}” will be removed from the project. This cannot be undone.`,
+                      action: "Delete finding",
+                      onConfirm: async () => {
+                        await ws.removeFinding(finding.id);
+                        navigate(
+                          { name: "project", projectId: project.id, view: "overview" },
+                          true,
+                        );
+                        toast("Finding deleted");
+                      },
+                    })
+                  }
+                />
+              ) : (
+                <ProjectPage
+                  project={project}
+                  findings={findings}
+                  onChange={ws.updateProject}
+                  onDelete={() =>
+                    confirm({
+                      title: "Delete this project?",
+                      body: `“${project.name || "Untitled project"}”, its ${findings.length} findings and all screenshots will be removed from this browser. Export it first if you may need it again.`,
+                      action: "Delete project",
+                      onConfirm: async () => {
+                        await db.deleteProject(project.id);
+                        navigate({ name: "home" }, true);
+                        toast("Project deleted");
+                      },
+                    })
+                  }
+                />
+              )}
+            </div>
           </div>
         )}
       </main>
