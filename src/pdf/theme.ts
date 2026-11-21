@@ -64,6 +64,11 @@ export const FAINT = "#8A979A";
 export const RULE = "#D5DFE1";
 export const WASH = "#F2F6F7";
 export const CODE_BG = "#F3F6F7";
+export const PAPER = "#FFFFFF";
+/** The lighter stripe of a zebra table, between PAPER and WASH. */
+export const STRIPE = "#FAFCFC";
+/** Medium's amber is too light for small text on white; labels use this darker step. */
+export const MEDIUM_TEXT = "#7A5300";
 
 /** Code colours on white paper, mirroring the app's five syntax roles. */
 export const SYNTAX: Record<string, string> = {
