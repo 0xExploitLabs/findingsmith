@@ -1,5 +1,5 @@
 {
-  "name": "debrief",
+  "name": "findingsmith",
   "private": true,
   "version": "0.1.0",
   "description": "Write penetration test reports in Markdown, score findings with CVSS and download a typeset PDF. Runs entirely in the browser.",

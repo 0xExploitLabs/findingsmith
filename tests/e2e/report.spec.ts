@@ -590,5 +590,5 @@ test("the PDF is a clean report: no Markdown, no watermark", async ({ page }) =>
   // The document properties carry the author's name, not the tool's.
   expect(info.Producer).toBe("Kestrel Security");
   expect(info.Creator).toBe("Kestrel Security");
-  expect(JSON.stringify(info)).not.toMatch(/react-pdf|debrief/i);
+  expect(JSON.stringify(info)).not.toMatch(/react-pdf|debrief|findingsmith/i);
 });

@@ -104,7 +104,10 @@ export function ProjectHome({
             ]}
             onSelect={async (v) => {
               if (v === "delete") return onDelete();
-              download(await exportProject(project), `${safeFilename(project.name)}.debrief.json`);
+              download(
+                await exportProject(project),
+                `${safeFilename(project.name)}.findingsmith.json`,
+              );
               toast("Project exported");
             }}
           />

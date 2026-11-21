@@ -1,6 +1,6 @@
 # Security policy
 
-Debrief handles sensitive material: findings, credentials in screenshots and client names.
+Findingsmith handles sensitive material: findings, credentials in screenshots and client names.
 We take reports about it seriously.
 
 ## Reporting a vulnerability
@@ -14,5 +14,5 @@ Include what you found, the steps to reproduce it and the impact you expect.
 
 In scope are flaws in this code, for example script injection through Markdown, images or imported project files, and data leaking out of the browser.
 
-Debrief has no server, so attacks on hosting infrastructure are out of scope.
+Findingsmith has no server, so attacks on hosting infrastructure are out of scope.
 Data stored in a browser is only as safe as that browser profile and device.

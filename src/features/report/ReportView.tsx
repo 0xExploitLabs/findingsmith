@@ -1,5 +1,6 @@
 import { CircleAlert, CircleCheck, Download, LoaderCircle } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { APP_NAME } from "../../brand";
 import { download, safeFilename } from "../../data/transfer";
 import type { Finding, Project } from "../../domain/types";
 import { SheetMark } from "../../ui/Plot";
@@ -123,8 +124,8 @@ export function ReportView({
               {error === "stale" ? (
                 <>
                   <p className="text-[13.5px] text-ink-muted">
-                    Debrief was updated since this tab opened. Reload to load the new version. Your
-                    work is saved.
+                    {APP_NAME} was updated since this tab opened. Reload to load the new version.
+                    Your work is saved.
                   </p>
                   <Button size="sm" variant="primary" onClick={() => location.reload()}>
                     Reload

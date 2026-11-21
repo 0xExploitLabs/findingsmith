@@ -141,8 +141,13 @@ export function SiteShell({
             aria-label="Main"
             className="flex h-11 items-center gap-0.5 rounded-full bg-surface-1 pl-4 pr-1.5 shadow-page"
           >
-            <a href={href({ name: "home" })} aria-label="Debrief, home" className="mr-2 rounded-md">
-              <Wordmark compact />
+            <a
+              href={href({ name: "home" })}
+              aria-label={`${APP_NAME} by ${ORG_NAME}, home`}
+              className="mr-2 rounded-md"
+            >
+              <Wordmark compact className="sm:hidden" />
+              <Wordmark compact by className="max-sm:hidden" />
             </a>
             {link("home", "Overview")}
             {link(
@@ -176,6 +181,20 @@ export function SiteShell({
               <p className="font-display text-[64px] italic leading-[0.9] tracking-[-0.02em] sm:text-[88px]">
                 {APP_NAME}
               </p>
+              <a
+                href={ORG_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="group/org mt-4 inline-flex items-center gap-2.5 rounded-md text-[15px] text-ink-muted transition-colors duration-(--dur-short) hover:text-ink"
+              >
+                <Cicada className="h-[15px] text-ink" />
+                <span>
+                  by{" "}
+                  <span className="font-medium text-ink [font-feature-settings:'zero']">
+                    {ORG_NAME}
+                  </span>
+                </span>
+              </a>
               <p className="mt-5 max-w-[40ch] text-[14.5px] leading-relaxed text-ink-muted">
                 Pentest reports, written like notes. Everything is stored in this browser’s
                 IndexedDB and never leaves this device.
