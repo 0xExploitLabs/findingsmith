@@ -377,7 +377,7 @@ function PageChrome({ project, accent }: { project: Project; accent: string }) {
           justifyContent: "space-between",
         }}
       >
-        <Text style={{ fontSize: 7.4, color: FAINT }}>
+        <Text style={{ fontSize: 7.4, color: MUTED }}>
           {[project.preparedBy, project.version ? `Version ${project.version}` : ""]
             .filter(Boolean)
             .join("  /  ")}
