@@ -78,7 +78,7 @@ export function Sidebar({
     <aside className="flex h-full w-[296px] shrink-0 flex-col border-r border-line bg-surface-1">
       <div className="flex h-14 items-center gap-1 border-b border-line px-3">
         <a
-          href={href({ name: "home" })}
+          href={href({ name: "projects" })}
           className="flex h-8 items-center gap-1 rounded-lg pl-1 pr-2 text-[13px] text-ink-muted transition-colors hover:bg-hover hover:text-ink"
         >
           <ChevronLeft className="size-4" />

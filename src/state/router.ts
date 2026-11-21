@@ -2,6 +2,7 @@ import { useSyncExternalStore } from "react";
 
 export type Route =
   | { name: "home" }
+  | { name: "projects" }
   | { name: "project"; projectId: string; view: "overview" | "report" }
   | { name: "finding"; projectId: string; findingId: string };
 
@@ -16,6 +17,7 @@ export function parseHash(hash: string): Route {
       view: parts[2] === "report" ? "report" : "overview",
     };
   }
+  if (parts[0] === "projects") return { name: "projects" };
   return { name: "home" };
 }
 
@@ -23,6 +25,8 @@ export function href(route: Route): string {
   switch (route.name) {
     case "home":
       return "#/";
+    case "projects":
+      return "#/projects";
     case "project":
       return `#/p/${route.projectId}${route.view === "report" ? "/report" : ""}`;
     case "finding":
