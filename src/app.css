@@ -13,6 +13,33 @@
 @import "@fontsource-variable/geist";
 @import "@fontsource/instrument-serif/400-italic.css";
 
+/* The report's own faces, the same files the PDF embeds, so a page shown on
+   screen is set exactly as it prints. */
+@font-face {
+  font-family: "Report Sans";
+  src: url("/fonts/pdf-sans-400.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Report Sans";
+  src: url("/fonts/pdf-sans-600.ttf") format("truetype");
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Report Sans";
+  src: url("/fonts/pdf-sans-700.ttf") format("truetype");
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Report Display";
+  src: url("/fonts/pdf-sans-display.ttf") format("truetype");
+  font-weight: 700;
+  font-display: swap;
+}
+
 @font-face {
   font-family: "JetBrains Mono";
   src: url("/fonts/jetbrains-mono.ttf") format("truetype");
@@ -106,6 +133,7 @@
   --color-sheet: rgb(255 255 255);
   --color-sheet-ink: rgb(11 24 27);
   --color-sheet-muted: rgb(85 102 106);
+  --color-sheet-faint: rgb(138 151 154);
   --color-sheet-rule: rgb(213 223 225);
   --color-sheet-wash: rgb(243 246 247);
   --color-sheet-accent: rgb(3 104 119);
@@ -117,6 +145,9 @@
   --color-sev-info: rgb(var(--sev-info));
   --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Instrument Serif", ui-serif, Georgia, serif;
+  --font-report: "Report Sans", "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-report-display:
+    "Report Display", "Report Sans", "Geist Variable", ui-sans-serif, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
   --shadow-pop:
     0 1px 0 rgb(var(--brand-ink) / 0.06) inset, 0 18px 50px -12px rgb(var(--brand-shadow) / 0.55),
@@ -437,6 +468,137 @@
 }
 .prose-md img[data-missing] {
   display: none;
+}
+
+/* Markdown on a sheet, with the sizes src/pdf/markdown.tsx prints. One CSS
+   pixel is one PDF point; the sheet is zoomed as a whole. */
+.sheet .sheet-prose {
+  font-size: 9.6px;
+  line-height: 1.55;
+  overflow-wrap: break-word;
+}
+.sheet .sheet-prose > * + * {
+  margin-top: 7px;
+}
+.sheet .sheet-prose :is(h1, h2, h3, h4, h5, h6) {
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: 0;
+  margin-top: 12px;
+  margin-bottom: 2px;
+}
+.sheet .sheet-prose > :first-child {
+  margin-top: 0;
+}
+.sheet .sheet-prose h1 {
+  font-size: 14px;
+}
+.sheet .sheet-prose h2 {
+  font-size: 12.5px;
+}
+.sheet .sheet-prose h3 {
+  font-size: 11px;
+}
+.sheet .sheet-prose h4 {
+  font-size: 10px;
+}
+.sheet .sheet-prose :is(h5, h6) {
+  font-size: 9.6px;
+}
+.sheet .sheet-prose strong {
+  font-weight: 700;
+}
+/* The report has no italic master: emphasis prints upright and muted. */
+.sheet .sheet-prose :is(em, del) {
+  font-style: normal;
+  color: var(--color-sheet-muted);
+}
+.sheet .sheet-prose a {
+  text-decoration-color: currentColor;
+  text-decoration-thickness: 0.6px;
+  text-underline-offset: 1.5px;
+}
+.sheet .sheet-prose ul {
+  padding-left: 11px;
+}
+.sheet .sheet-prose ol {
+  padding-left: 16px;
+}
+.sheet .sheet-prose li + li,
+.sheet .sheet-prose li > :is(ul, ol) {
+  margin-top: 3px;
+}
+.sheet .sheet-prose li > * + * {
+  margin-top: 7px;
+}
+.sheet .sheet-prose ul > li::marker {
+  color: var(--color-sheet-accent);
+  font-weight: 700;
+}
+.sheet .sheet-prose ol > li::marker {
+  color: var(--color-sheet-muted);
+  font-weight: 600;
+}
+.sheet .sheet-prose code {
+  font-size: 8.4px;
+  background: var(--color-sheet-wash);
+  border: 0;
+  border-radius: 0;
+  padding: 0 0.5ch;
+}
+.sheet .sheet-prose pre {
+  background: var(--color-sheet-wash);
+  border: 0.75px solid var(--color-sheet-rule);
+  border-radius: 3px;
+  padding: 7px 9px;
+  font-size: 7.6px;
+  line-height: 1.5;
+  overflow: visible;
+}
+.sheet .sheet-prose pre code {
+  font-size: inherit;
+  padding: 0;
+  background: none;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.sheet .sheet-prose pre[data-lang]::before {
+  content: attr(data-lang);
+  display: block;
+  margin-bottom: 3px;
+  font-family: var(--font-report);
+  font-size: 6.6px;
+  line-height: 1.2;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--color-sheet-faint);
+}
+.sheet .sheet-prose blockquote {
+  border-left: 2.5px solid var(--color-sheet-accent);
+  background: var(--color-sheet-wash);
+  padding: 6px 10px;
+  color: var(--color-sheet-ink);
+}
+.sheet .sheet-prose hr {
+  border-top: 0.75px solid var(--color-sheet-rule);
+  margin: 10px 0;
+}
+.sheet .sheet-prose table {
+  display: table;
+  font-size: 8.6px;
+  border: 0.75px solid var(--color-sheet-rule);
+}
+.sheet .sheet-prose :is(th, td) {
+  border: 0.75px solid var(--color-sheet-rule);
+  padding: 4px 6px;
+}
+.sheet .sheet-prose th {
+  font-weight: 700;
+}
+.sheet .sheet-prose img {
+  border: 0.75px solid var(--color-sheet-rule);
+  border-radius: 3px;
+  padding: 3px;
 }
 
 /* Syntax colours: the brand's five roles, not a vendored rainbow. */
@@ -802,15 +964,6 @@
   --brand-signal-drop: 178 38 31;
   --brand-signal-add: 34 106 48;
   color: var(--color-ink);
-}
-.sheet-prose {
-  font-size: 11.5px;
-  line-height: 1.6;
-}
-.sheet-prose pre {
-  font-size: 10px;
-  padding: 8px 12px;
-  border-radius: 4px;
 }
 .rise-late {
   animation: rise 0.7s var(--ease-out) var(--d, 0s) both;

@@ -53,6 +53,8 @@ function rehypeFinish(urls: Map<string, string>) {
         if (!code) return;
         const cls = (code.properties.className as string[] | undefined) ?? [];
         const lang = cls.find((c) => c.startsWith("language-"))?.slice(9);
+        // Named so a printed-page preview can label the block, as the PDF does.
+        if (lang) el.properties.dataLang = lang;
         if (canHighlight(lang)) {
           const highlighted = lowlight.highlight(lang, code.children.map(textOf).join(""));
           code.children = highlighted.children as ElementContent[];
