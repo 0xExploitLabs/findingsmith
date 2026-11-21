@@ -1,14 +1,3 @@
-/* Hallmark · shape: app screen · genre: modern-minimal · theme: brand · redesign: full
- * paper: oklch(98% 0.002 286) light, oklch(16% 0.008 286) dark · accent: oklch(52% 0.26 281) light, oklch(70% 0.17 287) dark · display: Instrument Serif italic · body: Geist
- * nav: kept (a top bar on home, the project sidebar in the workspace) · signature: the findings ledger, each finding's severity and score in one line · states: empty, loading, error, full
- * axes: white paper/italic serif/violet pixel field · posture: restrained · contrast: pass · v2.0.0 */
-/* Hallmark · pre-emit critique: P4 H4 E4 S4 R4 V3 · weakest: V, the shell is kept; home now leads with real pages the app rendered instead of a drawing */
-/* Hallmark · reworded "pentest reports, written like notes." to "Pentest reports, written like notes" · 38iii names the accent-coloured full stop */
-/* Hallmark · dropped Projects · the first-visit screen has no list to head, and the heading returns as the page title once a project exists */
-/* Hallmark · reworded "Delete this project?" · the delete handler is kept, only the quotes around the project name in its message became curly */
-/* Hallmark · dismissed 3 · the two side rules are Markdown blockquotes in the editor and preview, where a left rule is the convention, not a card stripe */
-/* Hallmark · answered F24 · the slash menu floats over editor text on a dark surface, where a shadow alone does not separate it, so it keeps its hairline like every other menu */
-/* Hallmark · dismissed 56 · the second sticky is the pinned full-screen pixel page, and the floating bar is meant to ride over it */
 @import "tailwindcss";
 @import "@fontsource-variable/geist";
 @import "@fontsource/instrument-serif/400-italic.css";
