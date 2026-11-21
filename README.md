@@ -1,52 +1,72 @@
-# Debrief, by 0xExploitLabs
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/banner-dark.png">
+    <img src="docs/banner-light.png" alt="Debrief: pentest reports, written like notes" width="100%">
+  </picture>
+</p>
+
+# Debrief
 
 Debrief is a penetration test report writer that runs entirely in your browser.
-You write each finding as one Markdown document, paste in its CVSS vector and screenshots, and download a typeset PDF.
-There is no account and no server: projects are stored in your browser's IndexedDB and never leave your device.
+You write each finding like a note, give it a CVSS vector and your evidence, and download a typeset PDF your client can read.
+There is no account and no server: your projects live in your browser and never leave your device.
 
-## What it does
+Made by [0xExploitLabs](https://github.com/0xExploitLabs).
 
-- **Writing like a notes app.**
-  Each finding and the report's own text are single Markdown documents with live preview, in the manner of Obsidian.
-  Markup is hidden and rendered in place, and shows again on the line you are editing.
-  Type `/` on an empty line for headings, code blocks in a language of your choice, request and response pairs, tables, checklists and images.
-  A table is a grid you fill in cell by cell; its Markdown stays out of sight.
-  Code fences close themselves as you type them, and every code block shows its language and lets you change it.
-  An empty section says what belongs in it until you write it.
-- **Properties when you need them.**
-  Every finding has a severity, a status and a CVSS field.
-  Endpoint and method, parameter, host, port, affected assets, CWE and CVE are added from the "Add property" picker, so a finding only shows what applies to it.
-  Usual sections such as Impact or Remediation are one click away under the write-up.
-- **All your projects in one place.**
-  The Projects page shows every engagement as its report: the cover with a page behind it for each of its gravest findings, its severity mix and a direct link to the PDF.
-- **Find anything.**
-  Press Ctrl+K (Cmd+K on macOS) to jump to a finding or run a command.
-  The sidebar folds to a rail of icons with its button or Ctrl+\, and stays the way you left it.
-- **Severity you can defend.**
-  Paste a CVSS 3.1 or 4.0 vector, or a bare base score from another tool, and the severity is derived from it using the rating scale in the CVSS specification, so a 5.3 is always Medium.
-  To rate a finding differently, pick another severity and give a reason; the report prints both ratings and the reason.
-- **A report, not a printout.**
-  The PDF is laid out with a cover, contents with page numbers and links, an executive summary with a risk overview, a findings table, one section per finding and a severity appendix.
-  Markdown is rendered, never printed raw.
-  No browser headers or footers and no tool name appear in the file; the document properties carry the name you enter under "Prepared by".
+![A finding open in Debrief, with its properties and write-up](docs/workspace.png)
+
+## Why
+
+Most of a pentest report is formatting.
+The findings are already in your notes, and the hours go into moving them to a Word template, fixing the numbering and arguing with tables.
+
+Debrief lets you write the report the way you take notes and lays it out for you.
+Because nothing is uploaded, you can use it on an engagement without asking anyone where client data ends up.
+
+## What you get
+
+- **An editor that feels like a notes app.**
+  Findings are Markdown with live preview: the markup hides itself and the text looks like the report.
+  Type `/` for headings, tables, checklists, images and code blocks in any language.
+  A table is a grid you fill in cell by cell, and an empty section tells you what belongs in it.
+- **Evidence where it belongs.**
+  Paste or drop screenshots straight into a finding.
+  HTTP requests and responses get their own highlighted blocks.
 - **A library of 50 findings.**
-  Common web, API, cloud and infrastructure issues come pre-written with a CVSS 3.1 vector, a CWE and references, ready to adapt.
+  SQL injection, stored XSS, IDOR, weak TLS and the rest come pre-written with a description, impact, remediation, references, a CWE and a CVSS vector.
+  Add one and change what is different on your engagement.
+- **Severity you can defend.**
+  Paste a CVSS 3.1 or 4.0 vector, build one in the calculator, or type a bare score.
+  The severity follows the score, so a 5.3 is always Medium.
+  Rate a finding differently and the report prints both ratings and your reason.
+- **A report, not a printout.**
+  The PDF has a cover, linked contents, an executive summary with a risk overview, a findings table, one section per finding and a severity appendix.
+  You choose its colour and logo.
+  No tool name or watermark appears anywhere in the file.
+- **Checks before you send.**
+  Debrief tells you which findings still lack a title, a write-up, remediation or a score.
 - **Your data stays yours.**
-  Export a project to a single file to back it up or move it to another browser, and import it again later.
-  Private notes on a finding are never included in the report.
+  Everything is stored in your browser's IndexedDB.
+  Export a project to one file to back it up or move it to another browser.
+  Private notes on a finding are never printed.
+- **Fast to move around.**
+  Ctrl+K (Cmd+K on macOS) jumps to any finding or command, and Ctrl+\ folds the sidebar away.
+  Light and dark themes, and a layout that works on a phone.
 
-## How the report is built from your documents
+## How a report is put together
 
-The project document holds the text that comes before the findings.
-You edit it under "Report details", next to the PDF it feeds.
-Each `## Heading` in it becomes a numbered section.
-A section whose title contains "summary" opens the report together with the risk overview, and a section titled "Conclusion" closes it after the findings.
+A project has two kinds of document.
 
-A finding document works the same way.
-Its `##` sections, typically Description, Impact, Steps to reproduce, Remediation and References, appear in the report in the order you write them.
-Sections left empty are skipped, and so are list items left blank.
+**Report details** hold what comes before the findings: the title, the dates, and sections such as the executive summary, scope and methodology.
+Each `## Heading` becomes a numbered section of the report.
+A section with "summary" in its title opens the report next to the risk overview, and one titled "Conclusion" closes it after the findings.
 
-## Severity rules
+**Findings** work the same way.
+Their `##` sections, usually Description, Impact, Steps to reproduce, Remediation and References, are printed in the order you write them.
+Sections left empty are skipped.
+Findings are ordered by severity and numbered `F-01`, `F-02` and so on.
+
+## Severity scale
 
 | CVSS base score | Severity |
 | --------------- | -------- |
@@ -57,51 +77,73 @@ Sections left empty are skipped, and so are list items left blank.
 | 0.0             | Info     |
 
 CVSS 3.1 scores follow the base score formula of the specification.
-CVSS 4.0 scores use the macrovector lookup published by FIRST and are labelled CVSS-B 4.0, or CVSS-BT 4.0 when Exploit Maturity is set.
-Vectors are parsed strictly: a malformed vector is rejected instead of scored.
+CVSS 4.0 scores use the macrovector lookup published by FIRST.
+A malformed vector is rejected instead of scored.
 
-## Run it locally
+## Run it
 
 You need Node.js 22 or later and pnpm.
 
 ```sh
+git clone https://github.com/0xExploitLabs/debrief.git
+cd debrief
 pnpm install
 pnpm dev
 ```
 
-Then open the address Vite prints.
-`pnpm build` writes a static site to `dist/` that any static host can serve; there is no backend.
+Open the address Vite prints.
 
-## Checks
+To host it yourself, run `pnpm build` and serve the `dist/` folder from any static host.
+There is no backend to set up.
+
+## Contributing
+
+Contributions are welcome, from a typo fix to a new feature.
+
+Good places to start:
+
+- **The finding library.**
+  Add a finding you write up often, or improve the wording of an existing one.
+  Entries live in `src/data/library.ts` and each one needs a CVSS 3.1 vector.
+- **The PDF.**
+  Layout and typography improvements to the report in `src/pdf`.
+- **Bugs and rough edges.**
+  If something looks off or behaves oddly, open an issue with what you did and what you saw, or send the fix.
+
+How to send a change:
+
+1. Fork the repository and create a branch from `main`.
+2. Make your change, and add or update a test when it changes behaviour.
+3. Run the checks below until they pass.
+4. Open a pull request that says what the problem was and how you checked the fix.
+
+For anything large, open an issue first so we can agree on the direction before you spend the time.
 
 ```sh
-pnpm check       # Biome lint and format
+pnpm check       # lint and format (pnpm fix applies the fixes)
 pnpm typecheck   # TypeScript
-pnpm test        # unit tests: CVSS scoring, severity rules, Markdown sections
+pnpm test        # unit tests
 pnpm e2e         # browser tests against the production build
 ```
 
-The end-to-end tests create a project, score and override findings, download the PDF and read its text to confirm that no raw Markdown or tool name ends up in it.
-They use Playwright's Chromium; to use one already installed, set `CHROMIUM_PATH`, for example `CHROMIUM_PATH=/usr/bin/chromium pnpm e2e`.
+The browser tests use Playwright's Chromium.
+To use one you already have, set `CHROMIUM_PATH`, for example `CHROMIUM_PATH=/usr/bin/chromium pnpm e2e`.
 
-## Project layout
+A few conventions keep the code consistent:
 
-```
-src/domain      types, CVSS scoring, severity rules
-src/data        IndexedDB storage, images, import and export, the finding library
-src/markdown    Markdown parsing, highlighting and section splitting
-src/features    the screens: projects, the editor, the finding library, the report
-src/pdf         the PDF report, laid out with react-pdf
-patches         two small fixes to react-pdf, applied by pnpm
-```
+- Commit messages follow `type(scope): what changed`, such as `fix(pdf): keep a table row on one page`.
+- User-facing text is plain and short, and empty fields show an example instead of an instruction.
+- Nothing may send report data anywhere: no analytics, no remote fonts, no network calls with project content.
 
 ## Security
 
-See [SECURITY.md](SECURITY.md) to report a vulnerability.
+Please do not report vulnerabilities in public issues.
+See [SECURITY.md](SECURITY.md) for how to report one.
 
 ## License
 
 The code is licensed under either of [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option.
+Unless you say otherwise, any contribution you submit is licensed the same way.
 
 Fonts bundled in `public/fonts` keep their own licenses:
 
