@@ -127,9 +127,13 @@ export function ProjectPage({
 
         {hidden.length > 0 ? (
           <Menu
-            heading="Add property"
-            width={280}
-            items={hidden.map((e) => ({ value: e.key, label: e.label, icon: e.icon }))}
+            width={260}
+            items={hidden.map((e) => ({
+              value: e.key,
+              label: e.label,
+              icon: e.icon,
+              detail: e.example,
+            }))}
             onSelect={(key) => {
               setShown((prev) => new Set(prev).add(key));
               setJustAdded(key);
