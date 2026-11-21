@@ -273,12 +273,13 @@ test("typing a code fence closes it, so the text after stays prose", async ({ pa
   ).toBeVisible();
 });
 
-test("a finding always has its main properties, and the rest come from the picker", async ({
+test("only severity and status are fixed: every other property can leave the finding", async ({
   page,
 }) => {
   await newProject(page);
   await blankFinding(page, "Open redirect");
-  // Endpoint, host and CWE are there to fill from the start.
+  const article = page.locator("article");
+  // CVSS, endpoint, host and CWE are there to fill from the start.
   await page.getByLabel("Endpoint URL").fill("https://app.example.com/login?next=");
   await page.getByRole("button", { name: "HTTP method" }).click();
   await page.getByRole("menuitemradio", { name: "GET" }).click();
@@ -293,14 +294,43 @@ test("a finding always has its main properties, and the rest come from the picke
     "placeholder",
     "CVSS:3.1/AV:N/AC:L/… or 9.8",
   );
-  await expect(page.getByRole("button", { name: "Remove Endpoint" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Remove Severity" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Remove Status" })).toHaveCount(0);
 
-  await expect(page.getByLabel("Parameter", { exact: true })).toHaveCount(0);
+  // A rated finding keeps its severity when its CVSS score goes.
+  await page
+    .getByLabel("CVSS vector or score")
+    .fill("CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N");
+  await expect(page.getByRole("button", { name: "Severity: Medium" })).toBeVisible();
+  await expect(article).toContainText("from the CVSS score");
+  for (const name of ["CVSS", "Endpoint", "Host", "CWE"]) {
+    await page.getByRole("button", { name: `Remove ${name}` }).click();
+  }
+  await expect(page.getByLabel("CVSS vector or score")).toHaveCount(0);
+  await expect(page.getByLabel("Endpoint URL")).toHaveCount(0);
+  await expect(page.getByLabel("Host", { exact: true })).toHaveCount(0);
+  await expect(page.getByLabel("CWE", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Severity: Medium" })).toBeVisible();
+  await expect(article).toContainText("set by you");
+  // Without a CVSS row, the finding no longer asks for a score.
+  await expect(article).not.toContainText("a CVSS score");
+
+  // Removed stays removed.
+  await page.reload();
+  await expect(page.getByLabel("Title", { exact: true })).toHaveValue("Open redirect");
+  await expect(page.getByLabel("CVSS vector or score")).toHaveCount(0);
+  await expect(page.getByLabel("Endpoint URL")).toHaveCount(0);
+
+  // Every property, the four above included, comes back from the picker.
   await page.getByRole("button", { name: "Add property" }).click();
   await expect(page.getByRole("menuitem")).toHaveText([
+    "CVSSCVSS:3.1/AV:N/…",
+    "EndpointGET /api/invoices/{id}",
     "Parameterinvoice_id",
+    "Hostapp.example.com",
     "Port443",
     "Affectedapi.example.com",
+    "CWECWE-79",
     "CVECVE-2021-44228",
   ]);
   await page.getByRole("menuitem", { name: /Parameter/ }).click();
@@ -308,6 +338,9 @@ test("a finding always has its main properties, and the rest come from the picke
   await page.keyboard.type("next");
   await page.getByRole("button", { name: "Remove Parameter" }).click();
   await expect(page.getByLabel("Parameter", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Add property" }).click();
+  await page.getByRole("menuitem", { name: /CVSS/ }).click();
+  await expect(page.getByLabel("CVSS vector or score")).toBeFocused();
 });
 
 test("the CVSS calculator builds the vector, and the severity follows", async ({ page }) => {

@@ -22,7 +22,14 @@ import { memo, type ReactNode, useCallback, useEffect, useRef, useState } from "
 import { findingGaps, listInWords } from "../../domain/completeness";
 import { formatScore, readCvss } from "../../domain/cvss";
 import { rate } from "../../domain/severity";
-import { type Finding, SEVERITIES, type Severity, STATUSES } from "../../domain/types";
+import {
+  type Finding,
+  PROPERTIES,
+  type PropertyKey,
+  SEVERITIES,
+  type Severity,
+  STATUSES,
+} from "../../domain/types";
 import {
   Button,
   cx,
@@ -69,28 +76,21 @@ const FINDING_HINTS = {
 
 const METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"] as const;
 
-type OptionalKey = "endpoint" | "parameter" | "host" | "port" | "affected" | "cwe" | "cve";
-
-/** The properties nearly every finding states; these rows are always there to fill. */
-const ALWAYS: OptionalKey[] = ["endpoint", "host", "cwe"];
-
 /**
- * Properties a finding can have. The rest are added from the picker when they
- * apply. Each shows a real value as its example, never an instruction.
+ * How each property besides severity and status is shown. Any of them can be
+ * removed and added back from the picker. Each shows a real value as its
+ * example, never an instruction.
  */
-const OPTIONAL: { key: OptionalKey; label: string; icon: ReactNode; example: string }[] = [
-  { key: "endpoint", label: "Endpoint", icon: <Link2 />, example: "GET /api/invoices/{id}" },
-  { key: "parameter", label: "Parameter", icon: <SlidersHorizontal />, example: "invoice_id" },
-  { key: "host", label: "Host", icon: <Server />, example: "app.example.com" },
-  { key: "port", label: "Port", icon: <Plug />, example: "443" },
-  { key: "affected", label: "Affected", icon: <Layers />, example: "api.example.com" },
-  { key: "cwe", label: "CWE", icon: <Bug />, example: "CWE-79" },
-  { key: "cve", label: "CVE", icon: <ShieldAlert />, example: "CVE-2021-44228" },
-];
-
-function hasValue(f: Finding, key: OptionalKey): boolean {
-  return key === "endpoint" ? !!(f.endpoint || f.method) : !!f[key].trim();
-}
+const PROPERTY: Record<PropertyKey, { label: string; icon: ReactNode; example: string }> = {
+  cvss: { label: "CVSS", icon: <Hash />, example: "CVSS:3.1/AV:N/…" },
+  endpoint: { label: "Endpoint", icon: <Link2 />, example: "GET /api/invoices/{id}" },
+  parameter: { label: "Parameter", icon: <SlidersHorizontal />, example: "invoice_id" },
+  host: { label: "Host", icon: <Server />, example: "app.example.com" },
+  port: { label: "Port", icon: <Plug />, example: "443" },
+  affected: { label: "Affected", icon: <Layers />, example: "api.example.com" },
+  cwe: { label: "CWE", icon: <Bug />, example: "CWE-79" },
+  cve: { label: "CVE", icon: <ShieldAlert />, example: "CVE-2021-44228" },
+};
 
 /** Everything of a finding that typing its write-up does not change. */
 function sameButText(a: Finding, b: Finding): boolean {
@@ -124,7 +124,7 @@ export function FindingEditor({
 
   // What the finding still needs is read from the write-up, which means
   // parsing it: that waits for a pause in the typing.
-  const { title, body, cvss, manualSeverity } = finding;
+  const { title, body, cvss, manualSeverity, properties } = finding;
   const [gaps, setGaps] = useState(() => findingGaps(finding));
   const first = useRef(true);
   useEffect(() => {
@@ -135,13 +135,13 @@ export function FindingEditor({
     const timer = setTimeout(
       () =>
         setGaps((before) => {
-          const now = findingGaps({ title, body, cvss, manualSeverity });
+          const now = findingGaps({ title, body, cvss, manualSeverity, properties });
           return now.join() === before.join() ? before : now;
         }),
       350,
     );
     return () => clearTimeout(timer);
-  }, [title, body, cvss, manualSeverity]);
+  }, [title, body, cvss, manualSeverity, properties]);
 
   return (
     <div className="flex min-h-full">
@@ -226,11 +226,7 @@ const Head = memo(
     onDelete,
   }: HeadProps) {
     const [override, setOverride] = useState<Severity | null>(null);
-    const [shown, setShown] = useState<Set<OptionalKey>>(
-      () =>
-        new Set([...ALWAYS, ...OPTIONAL.filter((p) => hasValue(finding, p.key)).map((p) => p.key)]),
-    );
-    const [justAdded, setJustAdded] = useState<OptionalKey | null>(null);
+    const [justAdded, setJustAdded] = useState<PropertyKey | null>(null);
     const [calculating, setCalculating] = useState(false);
     const rating = rate(finding);
     const cvssRead = finding.cvss.trim() ? readCvss(finding.cvss) : null;
@@ -242,16 +238,26 @@ const Head = memo(
       else setOverride(s);
     };
 
-    const remove = (key: OptionalKey) => {
-      onChange(key === "endpoint" ? { endpoint: "", method: "" } : { [key]: "" });
-      setShown((prev) => {
-        const next = new Set(prev);
-        next.delete(key);
-        return next;
-      });
+    const shown = PROPERTIES.filter((key) => finding.properties.includes(key));
+    const hidden = PROPERTIES.filter((key) => !finding.properties.includes(key));
+
+    const add = (key: PropertyKey) => {
+      onChange({ properties: [...finding.properties, key] });
+      setJustAdded(key);
     };
 
-    const hidden = OPTIONAL.filter((p) => !shown.has(p.key));
+    /** A removed property is emptied too, so the report leaves it out. */
+    const remove = (key: PropertyKey) => {
+      const properties = finding.properties.filter((k) => k !== key);
+      if (key === "cvss") {
+        // The finding keeps the severity it has, now rated by hand.
+        onChange({ properties, cvss: "", override: null, manualSeverity: rating.severity });
+      } else if (key === "endpoint") {
+        onChange({ properties, endpoint: "", method: "" });
+      } else {
+        onChange({ properties, [key]: "" });
+      }
+    };
 
     return (
       <>
@@ -410,55 +416,51 @@ const Head = memo(
             />
           </Property>
 
-          <Property icon={<Hash />} label="CVSS">
-            <div className="flex min-w-0 flex-1 items-center gap-3">
-              <InlineText
-                value={finding.cvss}
-                onChange={(cvss) => onChange({ cvss: cvss.replace(/\s+/g, "") })}
-                placeholder="CVSS:3.1/AV:N/AC:L/… or 9.8"
-                mono
-                label="CVSS vector or score"
-                fit
-                multiline
-                className="break-all"
-                invalid={cvssRead?.ok === false}
-              />
-              {cvssRead?.ok ? (
-                <span
-                  className={cx(
-                    "shrink-0 font-mono text-[13px] font-semibold",
-                    SEVERITY_CLASS[cvssRead.cvss.severity].text,
-                  )}
-                  title={cvssRead.cvss.nomenclature}
-                >
-                  {formatScore(cvssRead.cvss.score)}
-                </span>
-              ) : cvssRead ? (
-                <span className="shrink-0 text-[12px] text-danger" title={cvssRead.error}>
-                  Not a valid vector or score
-                </span>
-              ) : null}
-              <button
-                type="button"
-                onClick={() => setCalculating(true)}
-                className="btn btn-raised h-7 shrink-0 rounded-lg border border-line-strong bg-surface-1 px-2.5 text-[12.5px] text-ink-muted hover:border-line-hover hover:text-ink"
-              >
-                Calculate
-              </button>
-            </div>
-          </Property>
-
-          {[
-            ...OPTIONAL.filter((p) => ALWAYS.includes(p.key)),
-            ...OPTIONAL.filter((p) => !ALWAYS.includes(p.key) && shown.has(p.key)),
-          ].map((p) => (
+          {shown.map((key) => (
             <Property
-              key={p.key}
-              icon={p.icon}
-              label={p.label}
-              onRemove={ALWAYS.includes(p.key) ? undefined : () => remove(p.key)}
+              key={key}
+              icon={PROPERTY[key].icon}
+              label={PROPERTY[key].label}
+              onRemove={() => remove(key)}
             >
-              {p.key === "endpoint" ? (
+              {key === "cvss" ? (
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <InlineText
+                    value={finding.cvss}
+                    onChange={(cvss) => onChange({ cvss: cvss.replace(/\s+/g, "") })}
+                    placeholder="CVSS:3.1/AV:N/AC:L/… or 9.8"
+                    mono
+                    label="CVSS vector or score"
+                    fit
+                    multiline
+                    className="break-all"
+                    invalid={cvssRead?.ok === false}
+                    autoFocus={justAdded === "cvss"}
+                  />
+                  {cvssRead?.ok ? (
+                    <span
+                      className={cx(
+                        "shrink-0 font-mono text-[13px] font-semibold",
+                        SEVERITY_CLASS[cvssRead.cvss.severity].text,
+                      )}
+                      title={cvssRead.cvss.nomenclature}
+                    >
+                      {formatScore(cvssRead.cvss.score)}
+                    </span>
+                  ) : cvssRead ? (
+                    <span className="shrink-0 text-[12px] text-danger" title={cvssRead.error}>
+                      Not a valid vector or score
+                    </span>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => setCalculating(true)}
+                    className="btn btn-raised h-7 shrink-0 rounded-lg border border-line-strong bg-surface-1 px-2.5 text-[12.5px] text-ink-muted hover:border-line-hover hover:text-ink"
+                  >
+                    Calculate
+                  </button>
+                </div>
+              ) : key === "endpoint" ? (
                 <div className="flex min-w-0 flex-1 items-center gap-1.5">
                   <Menu
                     value={finding.method as (typeof METHODS)[number]}
@@ -497,13 +499,13 @@ const Head = memo(
                 </div>
               ) : (
                 <InlineText
-                  value={finding[p.key]}
-                  onChange={(v) => onChange({ [p.key]: v })}
-                  placeholder={p.example}
-                  mono={p.key !== "affected"}
-                  multiline={p.key === "affected"}
-                  label={p.label}
-                  autoFocus={justAdded === p.key}
+                  value={finding[key]}
+                  onChange={(v) => onChange({ [key]: v })}
+                  placeholder={PROPERTY[key].example}
+                  mono={key !== "affected"}
+                  multiline={key === "affected"}
+                  label={PROPERTY[key].label}
+                  autoFocus={justAdded === key}
                 />
               )}
             </Property>
@@ -513,16 +515,13 @@ const Head = memo(
         {hidden.length > 0 ? (
           <Menu
             width={260}
-            items={hidden.map((p) => ({
-              value: p.key,
-              label: p.label,
-              icon: p.icon,
-              detail: <span className="font-mono text-[11.5px]">{p.example}</span>,
+            items={hidden.map((key) => ({
+              value: key,
+              label: PROPERTY[key].label,
+              icon: PROPERTY[key].icon,
+              detail: <span className="font-mono text-[11.5px]">{PROPERTY[key].example}</span>,
             }))}
-            onSelect={(key) => {
-              setShown((prev) => new Set(prev).add(key));
-              setJustAdded(key);
-            }}
+            onSelect={add}
             trigger={({ toggle, ref, open }) => (
               <button
                 ref={ref}
