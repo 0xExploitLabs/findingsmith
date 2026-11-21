@@ -178,17 +178,24 @@ export function SeverityBadge({ severity, className }: { severity: Severity; cla
 }
 
 /** Positions a floating element under its anchor, flipping above when there is no room. */
+/**
+ * Where a popup sits next to its anchor: below it, or above when there is
+ * more room there, its start or end aligned with the anchor's. The position
+ * is all in offsets, never in a transform, so an opening animation that
+ * moves the popup a little starts from where it will stay.
+ */
 function useAnchoredPosition(
   open: boolean,
   anchor: React.RefObject<HTMLElement | null>,
   align: "start" | "end",
+  width: number,
 ) {
-  const [pos, setPos] = useState<{ top: number; left: number; maxHeight: number; above: boolean }>({
-    top: 0,
-    left: 0,
-    maxHeight: 320,
-    above: false,
-  });
+  const [pos, setPos] = useState<{
+    top?: number;
+    bottom?: number;
+    left: number;
+    maxHeight: number;
+  }>({ top: 0, left: 0, maxHeight: 320 });
   useLayoutEffect(() => {
     if (!open) return;
     const place = () => {
@@ -197,11 +204,11 @@ function useAnchoredPosition(
       const below = window.innerHeight - r.bottom - 12;
       const above = r.top - 12;
       const flip = below < 220 && above > below;
+      const left = align === "end" ? r.right - width : r.left;
       setPos({
-        top: flip ? r.top - 6 : r.bottom + 6,
-        left: align === "end" ? r.right : r.left,
+        ...(flip ? { bottom: window.innerHeight - r.top + 6 } : { top: r.bottom + 6 }),
+        left: Math.max(8, Math.min(left, window.innerWidth - width - 8)),
         maxHeight: Math.max(160, flip ? above : below),
-        above: flip,
       });
     };
     place();
@@ -211,7 +218,7 @@ function useAnchoredPosition(
       window.removeEventListener("resize", place);
       window.removeEventListener("scroll", place, true);
     };
-  }, [open, anchor, align]);
+  }, [open, anchor, align, width]);
   return pos;
 }
 
@@ -251,7 +258,7 @@ export function Menu<T extends string>({
   const [active, setActive] = useState(0);
   const anchor = useRef<HTMLButtonElement | null>(null);
   const panel = useRef<HTMLDivElement | null>(null);
-  const pos = useAnchoredPosition(open, anchor, align);
+  const pos = useAnchoredPosition(open, anchor, align, width);
 
   useEffect(() => {
     if (!open) return;
@@ -304,10 +311,10 @@ export function Menu<T extends string>({
               style={{
                 position: "fixed",
                 top: pos.top,
+                bottom: pos.bottom,
                 left: pos.left,
                 width,
                 maxHeight: pos.maxHeight,
-                transform: `${align === "end" ? "translateX(-100%)" : ""} ${pos.above ? "translateY(-100%)" : ""}`,
               }}
               className="z-[200] overflow-y-auto rounded-xl border border-line-strong bg-surface-2 p-1 shadow-pop outline-none animate-in"
             >

@@ -776,3 +776,29 @@ test("selected text is drawn in the theme's own colour, code included", async ({
   expect(colours.drawn).not.toBe("rgb(215, 212, 240)");
   expect(colours.codeAlpha).toBeLessThan(1);
 });
+
+test("a menu opens where it stays, so a quick click lands on its entry", async ({ page }) => {
+  await newProject(page);
+  const add = page.locator("#project-nav").getByRole("button", { name: "Add finding" });
+  await add.click();
+  const menu = page.getByRole("menu");
+  /** Where the menu is drawn at a given point of its opening animation. */
+  const at = (progress: "start" | "end") =>
+    menu.evaluate((panel, progress) => {
+      for (const animation of panel.getAnimations()) {
+        animation.pause();
+        animation.currentTime = progress === "start" ? 0 : 10_000;
+      }
+      const { left, right, top } = panel.getBoundingClientRect();
+      return { left, right, top };
+    }, progress);
+  const start = await at("start");
+  const end = await at("end");
+  // The opening is a small lift and fade, not a slide across the page.
+  expect(Math.abs(start.left - end.left)).toBeLessThan(6);
+  expect(Math.abs(start.top - end.top)).toBeLessThan(8);
+  // Aligned to the end of its button, inside the window.
+  const button = await add.boundingBox();
+  expect(Math.abs(end.right - ((button?.x ?? 0) + (button?.width ?? 0)))).toBeLessThan(2);
+  expect(end.left).toBeGreaterThanOrEqual(0);
+});
