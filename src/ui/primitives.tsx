@@ -218,6 +218,8 @@ export interface MenuItem<T extends string> {
   value: T;
   label: ReactNode;
   hint?: ReactNode;
+  /** A quiet note at the end of the row, such as an example value. */
+  detail?: ReactNode;
   icon?: ReactNode;
   danger?: boolean;
 }
@@ -316,26 +318,38 @@ export function Menu<T extends string>({
               {items.map((item, i) => (
                 <button
                   type="button"
-                  role="menuitem"
+                  // A menu that holds a choice says which entry is the current one.
+                  {...(value === undefined
+                    ? { role: "menuitem" }
+                    : { role: "menuitemradio", "aria-checked": value === item.value })}
                   key={item.value}
                   onMouseEnter={() => setActive(i)}
                   onClick={() => choose(item.value)}
                   className={cx(
-                    "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] [&_svg]:size-4 [&_svg]:shrink-0",
+                    "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-left text-[13.5px] [&_svg]:size-4 [&_svg]:shrink-0",
                     i === active && "bg-hover",
                     item.danger ? "text-danger" : "text-ink",
                   )}
                 >
-                  {item.icon}
+                  {item.icon ? (
+                    <span className={cx("flex", !item.danger && "text-ink-muted")}>
+                      {item.icon}
+                    </span>
+                  ) : null}
                   <span className="min-w-0 flex-1">
                     <span className="block truncate">{item.label}</span>
                     {item.hint ? (
-                      <span className="mt-0.5 block text-[11.5px] leading-snug text-ink-faint">
+                      <span className="mt-0.5 block text-[12px] leading-snug text-ink-faint">
                         {item.hint}
                       </span>
                     ) : null}
                   </span>
-                  {value === item.value ? <Check className="text-accent" /> : null}
+                  {item.detail ? (
+                    <span className="max-w-[60%] shrink-0 truncate text-[12px] text-ink-faint">
+                      {item.detail}
+                    </span>
+                  ) : null}
+                  {value === item.value ? <Check className="!size-3.5 text-accent" /> : null}
                 </button>
               ))}
             </div>,

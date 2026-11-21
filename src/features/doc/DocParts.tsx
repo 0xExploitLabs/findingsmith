@@ -108,7 +108,7 @@ export function InlineText({
   useAutoHeight(area, value);
   const cls = cx(
     "-mx-1.5 block min-w-0 rounded-md bg-transparent px-1.5 py-[3px] text-[14px] text-ink outline-none transition-colors placeholder:text-ink-faint hover:bg-hover focus:bg-hover",
-    mono && "font-mono text-[12.5px] placeholder:font-sans placeholder:text-[13.5px]",
+    mono && "font-mono text-[12.5px]",
     invalid && "text-danger",
     fit ? "w-auto max-w-full [field-sizing:content]" : "w-full",
     className,

@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { findingGaps, listInWords } from "../../domain/completeness";
-import { formatScore, RATING_SCALE, readCvss } from "../../domain/cvss";
+import { formatScore, readCvss } from "../../domain/cvss";
 import { rate } from "../../domain/severity";
 import { type Finding, SEVERITIES, type Severity, STATUSES } from "../../domain/types";
 import {
@@ -73,25 +73,18 @@ type OptionalKey = "endpoint" | "parameter" | "host" | "port" | "affected" | "cw
 /** The properties nearly every finding states; these rows are always there to fill. */
 const ALWAYS: OptionalKey[] = ["endpoint", "host", "cwe"];
 
-/** Properties a finding can have. The rest are added from the picker when they apply. */
-const OPTIONAL: { key: OptionalKey; label: string; icon: ReactNode; hint: string }[] = [
-  {
-    key: "endpoint",
-    label: "Endpoint",
-    icon: <Link2 />,
-    hint: "Method and URL of the affected request",
-  },
-  {
-    key: "parameter",
-    label: "Parameter",
-    icon: <SlidersHorizontal />,
-    hint: "The vulnerable parameter",
-  },
-  { key: "host", label: "Host", icon: <Server />, hint: "IP address or hostname" },
-  { key: "port", label: "Port", icon: <Plug />, hint: "Port of the affected service" },
-  { key: "affected", label: "Affected", icon: <Layers />, hint: "Other hosts, URLs or components" },
-  { key: "cwe", label: "CWE", icon: <Bug />, hint: "Weakness ID, such as CWE-639" },
-  { key: "cve", label: "CVE", icon: <ShieldAlert />, hint: "CVE ID, if one exists" },
+/**
+ * Properties a finding can have. The rest are added from the picker when they
+ * apply. Each shows a real value as its example, never an instruction.
+ */
+const OPTIONAL: { key: OptionalKey; label: string; icon: ReactNode; example: string }[] = [
+  { key: "endpoint", label: "Endpoint", icon: <Link2 />, example: "GET /api/invoices/{id}" },
+  { key: "parameter", label: "Parameter", icon: <SlidersHorizontal />, example: "invoice_id" },
+  { key: "host", label: "Host", icon: <Server />, example: "app.example.com" },
+  { key: "port", label: "Port", icon: <Plug />, example: "443" },
+  { key: "affected", label: "Affected", icon: <Layers />, example: "api.example.com" },
+  { key: "cwe", label: "CWE", icon: <Bug />, example: "CWE-79" },
+  { key: "cve", label: "CVE", icon: <ShieldAlert />, example: "CVE-2021-44228" },
 ];
 
 function hasValue(f: Finding, key: OptionalKey): boolean {
@@ -161,7 +154,7 @@ export function FindingEditor({
         <div className="mb-4 flex items-center gap-2">
           <span
             className={cx(
-              "rounded-md px-1.5 py-0.5 font-mono text-[12px] font-semibold",
+              "shrink-0 whitespace-nowrap rounded-md px-1.5 py-0.5 font-mono text-[12px] font-semibold",
               SEVERITY_CLASS[rating.severity].soft,
               SEVERITY_CLASS[rating.severity].text,
             )}
@@ -215,17 +208,15 @@ export function FindingEditor({
           <Property icon={<Gauge />} label="Severity">
             <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
               <Menu
-                heading={cvssSeverity ? `CVSS rates it ${cvssSeverity}` : "Severity"}
+                heading={cvssSeverity ? `CVSS rates it ${cvssSeverity}` : undefined}
                 value={rating.severity}
-                width={250}
+                width={188}
                 items={SEVERITIES.map((s) => ({
                   value: s,
                   label: (
-                    <span className="flex items-center justify-between gap-3">
-                      <SeverityLabel severity={s} />
-                      <span className="font-mono text-[11px] text-ink-faint">
-                        {RATING_SCALE.find((r) => r.severity === s)?.range.replace(" (None)", "")}
-                      </span>
+                    <span className="flex items-center gap-2.5">
+                      <span className={cx("size-2 rounded-full", SEVERITY_CLASS[s].dot)} />
+                      {s}
                     </span>
                   ),
                 }))}
@@ -276,12 +267,12 @@ export function FindingEditor({
 
           <Property icon={<CircleDot />} label="Status">
             <Menu
-              heading="Status"
               value={finding.status}
+              width={188}
               items={STATUSES.map((s) => ({
                 value: s,
                 label: (
-                  <span className="flex items-center gap-2">
+                  <span className="flex items-center gap-2.5">
                     <span className={cx("size-2 rounded-full", STATUS_DOT[s])} />
                     {s}
                   </span>
@@ -309,7 +300,7 @@ export function FindingEditor({
               <InlineText
                 value={finding.cvss}
                 onChange={(cvss) => onChange({ cvss: cvss.replace(/\s+/g, "") })}
-                placeholder="Paste a vector or a score"
+                placeholder="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
                 mono
                 label="CVSS vector or score"
                 fit
@@ -355,9 +346,8 @@ export function FindingEditor({
               {p.key === "endpoint" ? (
                 <div className="flex min-w-0 flex-1 items-center gap-1.5">
                   <Menu
-                    heading="Method"
                     value={finding.method as (typeof METHODS)[number]}
-                    width={150}
+                    width={140}
                     items={METHODS.map((m) => ({
                       value: m,
                       label: <span className="font-mono">{m}</span>,
@@ -394,7 +384,7 @@ export function FindingEditor({
                 <InlineText
                   value={finding[p.key]}
                   onChange={(v) => onChange({ [p.key]: v })}
-                  placeholder={p.hint}
+                  placeholder={p.example}
                   mono={p.key !== "affected"}
                   multiline={p.key === "affected"}
                   label={p.label}
@@ -407,13 +397,12 @@ export function FindingEditor({
 
         {hidden.length > 0 ? (
           <Menu
-            heading="Add property"
-            width={280}
+            width={260}
             items={hidden.map((p) => ({
               value: p.key,
               label: p.label,
-              hint: p.hint,
               icon: p.icon,
+              detail: <span className="font-mono text-[11.5px]">{p.example}</span>,
             }))}
             onSelect={(key) => {
               setShown((prev) => new Set(prev).add(key));
@@ -492,10 +481,6 @@ export function FindingEditor({
       />
     </div>
   );
-}
-
-function SeverityLabel({ severity }: { severity: Severity }) {
-  return <span className={cx("font-medium", SEVERITY_CLASS[severity].text)}>{severity}</span>;
 }
 
 /**

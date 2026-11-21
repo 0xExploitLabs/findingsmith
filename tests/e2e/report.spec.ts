@@ -229,8 +229,17 @@ test("rating a scored finding differently needs a reason", async ({ page }) => {
   const severity = page.locator("dd").first();
   await expect(severity).toContainText("Medium");
 
+  // The menu is the five ratings, each a dot and a name, with the current one marked.
   await page.getByRole("button", { name: "Severity: Medium" }).click();
-  await page.getByRole("menuitem", { name: /High/ }).click();
+  await expect(page.getByRole("menuitemradio")).toHaveText([
+    "Critical",
+    "High",
+    "Medium",
+    "Low",
+    "Info",
+  ]);
+  await expect(page.getByRole("menuitemradio", { name: "Medium" })).toBeChecked();
+  await page.getByRole("menuitemradio", { name: "High" }).click();
   const dialog = page.getByRole("dialog");
   const save = dialog.getByRole("button", { name: "Rate High" });
   await expect(save).toBeDisabled();
@@ -274,14 +283,28 @@ test("a finding always has its main properties, and the rest come from the picke
   // Endpoint, host and CWE are there to fill from the start.
   await page.getByLabel("Endpoint URL").fill("https://app.example.com/login?next=");
   await page.getByRole("button", { name: "HTTP method" }).click();
-  await page.getByRole("menuitem", { name: "GET" }).click();
+  await page.getByRole("menuitemradio", { name: "GET" }).click();
   await expect(page.getByRole("button", { name: "HTTP method" })).toHaveText("GET");
-  await expect(page.getByLabel("Host", { exact: true })).toBeVisible();
-  await expect(page.getByLabel("CWE", { exact: true })).toBeVisible();
+  // Empty fields show a real value as their example, not an instruction.
+  await expect(page.getByLabel("Host", { exact: true })).toHaveAttribute(
+    "placeholder",
+    "app.example.com",
+  );
+  await expect(page.getByLabel("CWE", { exact: true })).toHaveAttribute("placeholder", "CWE-79");
+  await expect(page.getByLabel("CVSS vector or score")).toHaveAttribute(
+    "placeholder",
+    "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+  );
   await expect(page.getByRole("button", { name: "Remove Endpoint" })).toHaveCount(0);
 
   await expect(page.getByLabel("Parameter", { exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Add property" }).click();
+  await expect(page.getByRole("menuitem")).toHaveText([
+    "Parameterinvoice_id",
+    "Port443",
+    "Affectedapi.example.com",
+    "CVECVE-2021-44228",
+  ]);
   await page.getByRole("menuitem", { name: /Parameter/ }).click();
   await expect(page.getByLabel("Parameter", { exact: true })).toBeFocused();
   await page.keyboard.type("next");
