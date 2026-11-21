@@ -63,7 +63,7 @@ test("the projects page lists every project and opens its report", async ({ page
   // The overview offers the same project again, and the way back to all of them.
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Pick up where you left off" })).toBeVisible();
-  await page.getByRole("link", { name: "Your project" }).click();
+  await page.getByRole("link", { name: "Your project", exact: true }).click();
   await expect(page).toHaveURL(/#\/projects$/);
 });
 

@@ -42,11 +42,13 @@ export function Projects() {
     });
 
   return (
-    <SiteShell current="projects" projectCount={rows?.length ?? null}>
-      <section className="mx-auto max-w-[1240px] animate-rise px-6 pb-24 pt-12">
+    <SiteShell current="projects" projectCount={rows?.length ?? null} onNewProject={actions.create}>
+      <section className="mx-auto max-w-[1240px] animate-rise px-6 pb-24 pt-10">
         <div className="flex flex-wrap items-end gap-x-6 gap-y-4">
           <div className="min-w-[16rem] flex-1">
-            <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.02em]">Projects</h1>
+            <h1 className="font-display text-[56px] italic leading-none tracking-[-0.02em]">
+              Projects
+            </h1>
             <p className="mt-1 text-[13.5px] text-ink-muted">
               One project per engagement. Open one to write, or go straight to its report.
             </p>
