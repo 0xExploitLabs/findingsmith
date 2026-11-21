@@ -792,9 +792,13 @@
   border-right: 1px solid var(--color-line);
 }
 .doc-editor .cm-lp-open {
+  position: relative;
   border-top: 1px solid var(--color-line);
   border-radius: 10px 10px 0 0;
-  padding-top: 12px;
+  /* The opening fence is the block's header: it carries the language. */
+  min-height: 36px;
+  padding-top: 8px;
+  padding-right: 132px;
   color: var(--color-ink-faint);
 }
 .doc-editor .cm-lp-close {
@@ -807,27 +811,112 @@
   border-radius: 10px;
 }
 .doc-editor .cm-lp-indented {
+  min-height: 0;
+  padding-top: 12px;
+  padding-right: 16px;
   color: inherit;
 }
-/* A fence line with nothing to show shrinks to padding. */
+/* A closing fence with nothing to show shrinks to padding. */
 .doc-editor .cm-lp-collapsed {
   font-size: 0;
   line-height: 0;
 }
-.doc-editor .cm-lp-open.cm-lp-collapsed {
-  padding-top: 12px;
-}
 .doc-editor .cm-lp-close.cm-lp-collapsed {
   padding-bottom: 12px;
 }
-.doc-editor .cm-lp-codelabel {
-  display: inline-block;
+/* The language of a code block: its name, and the way to change it. */
+.doc-editor .cm-lp-lang {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  max-width: 120px;
+  padding: 0 6px 0 8px;
+  border-radius: 6px;
   font-family: var(--font-sans);
   font-size: 12px;
   font-weight: 500;
   line-height: 1;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--dur-micro),
+    color var(--dur-micro);
+}
+.doc-editor .cm-lp-lang > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.doc-editor .cm-lp-lang.is-plain {
   color: var(--color-ink-faint);
-  padding: 2px 0 8px;
+}
+.doc-editor .cm-lp-lang svg {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  opacity: 0.7;
+}
+.doc-editor .cm-lp-lang:hover,
+.doc-editor .cm-lp-lang[aria-expanded="true"] {
+  background: var(--color-press);
+  color: var(--color-ink);
+}
+.cm-lang-menu {
+  position: fixed;
+  z-index: 200;
+  width: 208px;
+  padding: 4px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 12px;
+  background: var(--color-surface-2);
+  box-shadow: var(--shadow-pop);
+  font-size: 13px;
+  animation: var(--animate-in);
+}
+.cm-lang-search {
+  width: 100%;
+  height: 30px;
+  padding: 0 8px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--color-line);
+  background: transparent;
+  color: var(--color-ink);
+  outline: none;
+}
+.cm-lang-search::placeholder {
+  color: var(--color-ink-faint);
+}
+.cm-lang-list {
+  overflow-y: auto;
+}
+.cm-lang-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 8px;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+.cm-lang-option[aria-selected="true"] {
+  background: var(--color-hover);
+}
+.cm-lang-check {
+  display: flex;
+  color: var(--color-accent);
+}
+.cm-lang-menu .cm-lang-check > svg {
+  width: 14px;
+  height: 14px;
+}
+.cm-lang-none {
+  color: var(--color-ink-faint);
+  cursor: default;
 }
 .doc-editor .cm-lp-image {
   display: inline-flex;
@@ -852,26 +941,118 @@
   font-size: 12.5px;
   color: var(--color-ink-muted);
 }
+/* A table is a grid edited in place; its Markdown is never on screen. */
 .doc-editor .cm-lp-table {
-  padding: 8px 0;
-  cursor: text;
+  position: relative;
+  padding: 10px 0;
   overflow-x: auto;
 }
+.doc-editor .cm-lp-table-grid {
+  display: inline-grid;
+  grid-template-columns: auto 22px;
+  grid-template-rows: auto 26px;
+  max-width: 100%;
+}
 .doc-editor .cm-lp-table table {
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 10px;
   font-size: 14px;
   line-height: 1.5;
 }
 .doc-editor .cm-lp-table th,
 .doc-editor .cm-lp-table td {
-  border: 1px solid var(--color-line-strong);
+  min-width: 96px;
+  max-width: 420px;
+  height: 38px;
   padding: 8px 12px;
+  border-bottom: 1px solid var(--color-line);
+  border-right: 1px solid var(--color-line);
   text-align: left;
   vertical-align: top;
+  overflow-wrap: break-word;
+  outline: none;
+  cursor: text;
+}
+.doc-editor .cm-lp-table tr > :last-child {
+  border-right: 0;
+}
+.doc-editor .cm-lp-table tr:last-child > * {
+  border-bottom: 0;
 }
 .doc-editor .cm-lp-table th {
   background: var(--color-surface-2);
   font-weight: 600;
+}
+.doc-editor .cm-lp-table th:first-child {
+  border-top-left-radius: 9px;
+}
+.doc-editor .cm-lp-table th:last-child {
+  border-top-right-radius: 9px;
+}
+.doc-editor .cm-lp-table tr:last-child > :first-child {
+  border-bottom-left-radius: 9px;
+}
+.doc-editor .cm-lp-table tr:last-child > :last-child {
+  border-bottom-right-radius: 9px;
+}
+.doc-editor .cm-lp-table :is(th, td):focus {
+  box-shadow: inset 0 0 0 2px var(--color-accent);
+}
+.doc-editor .cm-lp-table :is(th, td):empty::before {
+  /* An empty cell still holds a line, so the caret has its full height. */
+  content: "\200b";
+}
+.doc-editor .cm-lp-table-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-ink-faint);
+  cursor: pointer;
+  transition:
+    background-color var(--dur-micro),
+    color var(--dur-micro),
+    opacity var(--dur-micro);
+}
+.doc-editor .cm-lp-table-btn > svg {
+  width: 14px;
+  height: 14px;
+}
+.doc-editor .cm-lp-table-btn:hover {
+  background: var(--color-press);
+  color: var(--color-ink);
+}
+.doc-editor .cm-lp-table-add {
+  border-radius: 6px;
+  opacity: 0;
+}
+.doc-editor .cm-lp-table-add-col {
+  margin-left: 4px;
+}
+.doc-editor .cm-lp-table-foot {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+  min-width: 0;
+}
+.doc-editor .cm-lp-table-foot > .cm-lp-table-add {
+  flex: 1;
+}
+.doc-editor .cm-lp-table:is(:hover, :focus-within) .cm-lp-table-add,
+.doc-editor .cm-lp-table-add:focus-visible {
+  opacity: 1;
+}
+.doc-editor .cm-lp-table-tools {
+  display: none;
+  gap: 2px;
+}
+.doc-editor .cm-lp-table:focus-within .cm-lp-table-tools {
+  display: flex;
+}
+.doc-editor .cm-lp-table-tools > .cm-lp-table-btn {
+  width: 24px;
+  border-radius: 6px;
 }
 .doc-editor .cm-lp-hint {
   color: var(--color-ink-faint);
@@ -922,7 +1103,7 @@
 .doc-editor .cm-tooltip-autocomplete .cm-completionLabel {
   flex: 1;
 }
-/* The group a run of entries belongs to, as in "Basic formatting". */
+/* The group a run of entries belongs to, as in "Code blocks". */
 .doc-editor .cm-tooltip-autocomplete completion-section {
   display: block;
   padding: 8px 10px 4px;

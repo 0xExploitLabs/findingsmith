@@ -2,13 +2,17 @@ import { syntaxTree } from "@codemirror/language";
 import {
   type EditorState,
   type Extension,
+  Facet,
   type Range,
   StateEffect,
   StateField,
+  type Text,
 } from "@codemirror/state";
 import { Decoration, type DecorationSet, EditorView, WidgetType } from "@codemirror/view";
 import type { SyntaxNode } from "@lezer/common";
 import { assetUrl } from "../../data/assets";
+import { LanguageWidget } from "./codeLang";
+import { TableWidget } from "./table";
 
 /**
  * Live preview, in the manner of Obsidian and Inkdrop: the document stays
@@ -78,21 +82,6 @@ class RuleWidget extends WidgetType {
   }
 }
 
-class LabelWidget extends WidgetType {
-  constructor(readonly label: string) {
-    super();
-  }
-  eq(other: LabelWidget) {
-    return other.label === this.label;
-  }
-  toDOM() {
-    const el = document.createElement("span");
-    el.className = "cm-lp-codelabel";
-    el.textContent = this.label;
-    return el;
-  }
-}
-
 class ImageWidget extends WidgetType {
   constructor(
     readonly url: string,
@@ -131,62 +120,48 @@ class ImageWidget extends WidgetType {
   }
 }
 
-class TableWidget extends WidgetType {
-  constructor(
-    readonly source: string,
-    readonly from: number,
-  ) {
+class HintWidget extends WidgetType {
+  constructor(readonly text = "Type / to insert a block") {
     super();
   }
-  eq(other: TableWidget) {
-    return other.source === this.source && other.from === this.from;
-  }
-  toDOM(view: EditorView) {
-    const wrap = document.createElement("div");
-    wrap.className = "cm-lp-table";
-    const table = document.createElement("table");
-    const rows = this.source
-      .split("\n")
-      .filter(
-        (line) => line.trim() && !/^\s*\|?\s*:?-{1,}:?\s*(\|\s*:?-{1,}:?\s*)*\|?\s*$/.test(line),
-      );
-    rows.forEach((line, r) => {
-      const tr = document.createElement("tr");
-      const cells = line
-        .trim()
-        .replace(/^\|/, "")
-        .replace(/\|$/, "")
-        .split(/(?<!\\)\|/);
-      for (const cell of cells) {
-        const td = document.createElement(r === 0 ? "th" : "td");
-        td.textContent = cell.trim().replace(/\\\|/g, "|").replace(/[*_`]/g, "");
-        tr.append(td);
-      }
-      table.append(tr);
-    });
-    wrap.append(table);
-    wrap.addEventListener("mousedown", (e) => {
-      e.preventDefault();
-      view.dispatch({ selection: { anchor: this.from } });
-      view.focus();
-    });
-    return wrap;
-  }
-  ignoreEvent() {
-    return false;
-  }
-}
-
-class HintWidget extends WidgetType {
-  eq() {
-    return true;
+  eq(other: HintWidget) {
+    return other.text === this.text;
   }
   toDOM() {
     const el = document.createElement("span");
     el.className = "cm-lp-hint";
-    el.textContent = "Type / to insert a block";
+    el.textContent = this.text;
     return el;
   }
+}
+
+/** What to write under a heading, by the heading's text in lower case. */
+export type SectionHints = Record<string, string>;
+
+const sectionHints = Facet.define<SectionHints, SectionHints>({
+  combine: (values) => Object.assign({}, ...values),
+});
+
+/**
+ * The line that prompts for a section's text: the second empty line under its
+ * heading (the first separates them), or the lone "1." of a list not begun.
+ * Null once the section holds anything.
+ */
+function promptLine(doc: Text, heading: number): { at: number; lead: string } | null {
+  let slot: { at: number; lead: string } | null = null;
+  let blanks = 0;
+  for (let n = heading + 1; n <= doc.lines; n++) {
+    const ln = doc.line(n);
+    if (/^#{1,6}\s/.test(ln.text)) break;
+    if (!ln.text.trim()) {
+      blanks++;
+      if (blanks <= 2 && !slot?.lead) slot = { at: ln.from, lead: "" };
+    } else if (/^\d+\.\s*$/.test(ln.text) && !slot?.lead) {
+      slot = { at: ln.to, lead: ln.text.endsWith(" ") ? "" : " " };
+      blanks = 3;
+    } else return null;
+  }
+  return slot;
 }
 
 const hide = Decoration.replace({});
@@ -221,6 +196,9 @@ function build(state: EditorState): DecorationSet {
   const active = activeLines(state, focused);
   const { doc } = state;
   const out: Range<Decoration>[] = [];
+  const hints = state.facet(sectionHints);
+  /** Lines that already carry a section's prompt. */
+  const prompted = new Set<number>();
   const isActive = (pos: number) => active.has(doc.lineAt(pos).number);
   const hideMark = (node: SyntaxNode, trailingSpace = false) => {
     if (isActive(node.from)) return;
@@ -236,7 +214,17 @@ function build(state: EditorState): DecorationSet {
 
       const heading = /^ATXHeading(\d)$/.exec(name);
       if (heading) {
-        out.push(line(`cm-lp-h${heading[1]}`).range(doc.lineAt(node.from).from));
+        const ln = doc.lineAt(node.from);
+        out.push(line(`cm-lp-h${heading[1]}`).range(ln.from));
+        const title = ln.text.replace(/^#+\s*|\s*#*\s*$/g, "").toLowerCase();
+        const text = heading[1] === "2" ? hints[title] : undefined;
+        const slot = text ? promptLine(doc, ln.number) : null;
+        if (text && slot) {
+          prompted.add(doc.lineAt(slot.at).number);
+          out.push(
+            Decoration.widget({ widget: new HintWidget(slot.lead + text), side: 1 }).range(slot.at),
+          );
+        }
         return;
       }
       switch (name) {
@@ -356,16 +344,18 @@ function build(state: EditorState): DecorationSet {
             if (!fenced && n === first) classes.push("cm-lp-open", "cm-lp-indented");
             if (!fenced && n === last) classes.push("cm-lp-close");
             if ((opening || closing) && !editing) {
-              const info = opening ? node.getChild("CodeInfo") : null;
-              const label = info ? doc.sliceString(info.from, info.to) : "";
-              if (!label) classes.push("cm-lp-collapsed");
-              if (ln.to > ln.from) {
-                out.push(
-                  label
-                    ? Decoration.replace({ widget: new LabelWidget(label) }).range(ln.from, ln.to)
-                    : hide.range(ln.from, ln.to),
-                );
-              }
+              // The fences are hidden; the opening line stays as the block's header.
+              if (closing) classes.push("cm-lp-collapsed");
+              if (ln.to > ln.from) out.push(hide.range(ln.from, ln.to));
+            }
+            if (opening) {
+              const info = node.getChild("CodeInfo");
+              out.push(
+                Decoration.widget({
+                  widget: new LanguageWidget(info ? doc.sliceString(info.from, info.to) : ""),
+                  side: 1,
+                }).range(ln.to),
+              );
             }
             out.push(line(classes.join(" ")).range(ln.from));
           }
@@ -374,10 +364,11 @@ function build(state: EditorState): DecorationSet {
         case "Table": {
           const from = doc.lineAt(node.from).from;
           const to = doc.lineAt(node.to).to;
-          if (!overlapsSelection(state, from, to, focused) && from === node.from) {
+          // Always a grid, edited in place; a table nested in a list or quote stays Markdown.
+          if (from === node.from) {
             out.push(
               Decoration.replace({
-                widget: new TableWidget(doc.sliceString(from, to), from),
+                widget: new TableWidget(doc.sliceString(from, to)),
                 block: true,
               }).range(from, to),
             );
@@ -396,7 +387,7 @@ function build(state: EditorState): DecorationSet {
     const ln = doc.lineAt(head);
     if (ln.length === 0 && state.selection.main.empty && doc.length > 0) {
       const tree = syntaxTree(state).resolveInner(head, 1);
-      if (!/Code/.test(tree.name)) out.push(hint.range(head));
+      if (!/Code/.test(tree.name) && !prompted.has(ln.number)) out.push(hint.range(head));
     }
   }
 
@@ -420,8 +411,9 @@ const decorations = StateField.define<DecorationSet>({
   provide: (f) => EditorView.decorations.from(f),
 });
 
-export function livePreview(): Extension {
+export function livePreview(hints: SectionHints = {}): Extension {
   return [
+    sectionHints.of(hints),
     focusField,
     decorations,
     EditorView.focusChangeEffect.of((_state, focusing) => setFocus.of(focusing)),
