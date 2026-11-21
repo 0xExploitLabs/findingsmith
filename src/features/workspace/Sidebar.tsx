@@ -6,6 +6,7 @@ import {
   CircleAlert,
   FileDown,
   FilePlus2,
+  FileText,
   GripVertical,
   LoaderCircle,
   Plus,
@@ -18,7 +19,6 @@ import { formatScore } from "../../domain/cvss";
 import { compareFindings, rate } from "../../domain/severity";
 import type { Finding, Project } from "../../domain/types";
 import { href, type Route } from "../../state/router";
-import { SheetMark } from "../../ui/Plot";
 import { MOD_KEY } from "../../ui/platform";
 import { cx, IconButton, Kbd, Menu, SEVERITY_CLASS } from "../../ui/primitives";
 import { countSeverities, SeverityMix } from "../../ui/SeverityMix";
@@ -116,38 +116,19 @@ export function Sidebar({
         </button>
       </div>
 
-      <div className="space-y-0.5 px-2 pt-2">
-        <a
-          href={href({ name: "project", projectId: project.id, view: "overview" })}
-          aria-current={view === "overview" ? "page" : undefined}
-          className={cx(
-            "block rounded-lg px-2.5 py-2 transition-colors",
-            view === "overview" ? "bg-surface-3" : "hover:bg-hover",
-          )}
-        >
-          <span className="block truncate text-[14px] font-semibold tracking-[-0.01em]">
-            {project.name || "Untitled project"}
-          </span>
-          <span className="block truncate text-[12.5px] text-ink-faint">
-            {project.client || "Summary, scope and details"}
-          </span>
-        </a>
-        <a
-          href={href({ name: "project", projectId: project.id, view: "report" })}
-          aria-current={view === "report" ? "page" : undefined}
-          className={cx(
-            "flex h-8 items-center gap-2.5 rounded-lg px-2.5 text-[13.5px] transition-colors [&_svg]:size-4",
-            view === "report"
-              ? "bg-surface-3 text-ink"
-              : "text-ink-muted hover:bg-hover hover:text-ink",
-          )}
-        >
-          <FileDown />
-          Export PDF
-        </a>
-      </div>
+      <a
+        href={href({ name: "project", projectId: project.id, view: "overview" })}
+        aria-current={view === "overview" ? "page" : undefined}
+        title="Project overview"
+        className={cx(
+          "mx-2 mt-3 block truncate rounded-lg px-2 py-1.5 text-[15px] font-semibold tracking-[-0.01em] transition-colors duration-(--dur-micro)",
+          view === "overview" ? "bg-surface-3" : "hover:bg-hover",
+        )}
+      >
+        {project.name || "Untitled project"}
+      </a>
 
-      <div className="mt-5 flex items-center gap-1.5 pl-4 pr-3">
+      <div className="mt-2 flex items-center gap-1.5 pl-4 pr-3">
         <h2 className="text-[13px] font-semibold text-ink">Findings</h2>
         <span className="text-[13px] tabular-nums text-ink-faint">{findings.length}</span>
         <div className="flex-1" />
@@ -205,21 +186,37 @@ export function Sidebar({
         />
       </div>
 
-      <SeverityMix counts={counts} bar={false} className="px-4 pb-1 pt-1" />
+      <SeverityMix counts={counts} bar={false} className="px-4 pb-1 pt-0.5" />
 
       <div className="mt-2 min-h-0 flex-1 overflow-y-auto px-2 pb-3">
         {findings.length === 0 ? (
-          <div className="mx-2 mt-1 rounded-xl bg-surface-2 px-4 py-5">
-            <SheetMark className="-ml-2 mb-2" />
-            <p className="text-[13px] text-ink">No findings yet.</p>
-            <p className="mt-1 text-[12.5px] leading-snug text-ink-faint">
-              Start from one of {LIBRARY.length} written findings, or from a blank page.
+          <div className="mx-2 mt-1 rounded-xl bg-surface-2 p-4">
+            <div aria-hidden="true" className="relative mb-4 ml-1 h-[58px] w-[112px]">
+              {(["Critical", "High", "Medium"] as const).map((severity, i) => (
+                <span
+                  key={severity}
+                  className="absolute top-0 block h-[58px] w-[76px] rounded-md border border-line-strong bg-surface-1 p-2 shadow-[0_6px_14px_-8px_rgb(var(--brand-shadow)/0.5)]"
+                  style={{ left: i * 18, rotate: `${(i - 1) * 5}deg` }}
+                >
+                  <span
+                    className={cx("block h-1.5 w-6 rounded-full", SEVERITY_CLASS[severity].dot)}
+                  />
+                  <span className="mt-2 block h-1 w-full rounded-full bg-line-strong" />
+                  <span className="mt-1.5 block h-1 w-4/5 rounded-full bg-line-strong" />
+                  <span className="mt-1.5 block h-1 w-3/5 rounded-full bg-line-strong" />
+                </span>
+              ))}
+            </div>
+            <p className="text-[13.5px] font-medium text-ink">No findings yet</p>
+            <p className="mt-1 text-[12.5px] leading-snug text-ink-muted">
+              {LIBRARY.length} findings are already written, each with its remediation and a CVSS
+              vector. Start from one.
             </p>
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-3.5 flex flex-col gap-1.5">
               <button
                 type="button"
                 onClick={onOpenLibrary}
-                className="flex h-8 items-center gap-1.5 rounded-lg bg-accent px-3 text-[13px] font-medium text-ink-inverse transition-colors duration-(--dur-micro) hover:bg-accent-deep active:translate-y-px [&_svg]:size-3.5"
+                className="flex h-8 items-center justify-center gap-1.5 rounded-lg bg-accent px-3 text-[13px] font-medium text-ink-inverse transition-colors duration-(--dur-micro) hover:bg-accent-deep active:translate-y-px [&_svg]:size-3.5"
               >
                 <BookOpen />
                 Browse the library
@@ -227,7 +224,7 @@ export function Sidebar({
               <button
                 type="button"
                 onClick={onNewFinding}
-                className="flex h-8 items-center rounded-lg px-2.5 text-[13px] text-ink-muted transition-colors duration-(--dur-micro) hover:bg-hover hover:text-ink"
+                className="flex h-8 items-center justify-center rounded-lg border border-line-strong px-2.5 text-[13px] text-ink-muted transition-colors duration-(--dur-micro) hover:border-line-hover hover:bg-hover hover:text-ink"
               >
                 Start blank
               </button>
@@ -282,7 +279,7 @@ export function Sidebar({
                     <span
                       className={cx(
                         "line-clamp-2 text-[13px] leading-snug",
-                        f.title ? "text-ink" : "italic text-ink-faint",
+                        f.title ? "text-ink" : "text-ink-muted",
                       )}
                     >
                       {f.title || "Untitled finding"}
@@ -305,6 +302,31 @@ export function Sidebar({
           })}
         </ul>
       </div>
+
+      <nav aria-label="Report" className="border-t border-line px-2 pb-2 pt-3">
+        <p className="px-2 pb-1 text-[12px] text-ink-faint">Report</p>
+        {(
+          [
+            ["details", "Report details", <FileText key="i" />],
+            ["report", "Export PDF", <FileDown key="i" />],
+          ] as const
+        ).map(([to, label, icon]) => (
+          <a
+            key={to}
+            href={href({ name: "project", projectId: project.id, view: to })}
+            aria-current={view === to ? "page" : undefined}
+            className={cx(
+              "flex h-8 items-center gap-2.5 rounded-lg px-2 text-[13.5px] transition-colors duration-(--dur-micro) [&_svg]:size-4",
+              view === to
+                ? "bg-surface-3 text-ink"
+                : "text-ink-muted hover:bg-hover hover:text-ink",
+            )}
+          >
+            {icon}
+            {label}
+          </a>
+        ))}
+      </nav>
 
       <div className="border-t border-line px-4 py-2.5">
         <div className="flex items-center justify-between">

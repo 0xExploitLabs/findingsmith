@@ -1,58 +1,13 @@
 import { CircleAlert, CircleCheck, Download, LoaderCircle } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { download, safeFilename } from "../../data/transfer";
-import { cvssOf } from "../../domain/severity";
 import type { Finding, Project } from "../../domain/types";
-import { findSection, splitSections } from "../../markdown/sections";
-import { href } from "../../state/router";
 import { SheetMark } from "../../ui/Plot";
 import { Button, cx } from "../../ui/primitives";
 import { toast } from "../../ui/toast";
+import { reportChecks } from "./checks";
 import { ReportSettings } from "./ReportSettings";
-
-interface Check {
-  ok: boolean;
-  label: string;
-  link?: string;
-}
-
-function checks(project: Project, findings: Finding[], refs: Map<string, string>): Check[] {
-  const list: Check[] = [];
-  const projectLink = href({ name: "project", projectId: project.id, view: "overview" });
-  const projectSections = splitSections(project.body);
-  list.push({ ok: !!project.preparedBy.trim(), label: "“Prepared by” is set" });
-  list.push({
-    ok: !!findSection(projectSections, /summary/i),
-    label: "Executive summary is written",
-    link: projectLink,
-  });
-  for (const f of findings) {
-    const ref = refs.get(f.id) ?? "";
-    const link = href({ name: "finding", projectId: project.id, findingId: f.id });
-    const sections = splitSections(f.body);
-    const missing = [
-      !f.title.trim() && "a title",
-      sections.length === 0 && "a write-up",
-      sections.length > 0 &&
-        !findSection(sections, /remediat|recommend|fix|mitigat/i) &&
-        "remediation",
-      !cvssOf(f) && f.manualSeverity !== "Info" && "a CVSS score",
-    ].filter(Boolean);
-    if (missing.length > 0) {
-      list.push({ ok: false, label: `${ref} needs ${missing.join(", ")}`, link });
-    }
-  }
-  if (findings.length > 0 && list.every((c) => c.ok)) {
-    list.push({
-      ok: true,
-      label:
-        findings.length === 1
-          ? "The finding is complete"
-          : `All ${findings.length} findings are complete`,
-    });
-  }
-  return list;
-}
+import { ReportTabs } from "./ReportTabs";
 
 export function ReportView({
   project,
@@ -131,7 +86,7 @@ export function ReportView({
   );
 
   const filename = `${safeFilename([project.client, project.name].filter(Boolean).join(" ") || "report")}.pdf`;
-  const list = useMemo(() => checks(project, findings, refs), [project, findings, refs]);
+  const list = useMemo(() => reportChecks(project, findings, refs), [project, findings, refs]);
   const issues = list.filter((c) => !c.ok).length;
 
   return (
@@ -139,10 +94,9 @@ export function ReportView({
     <div className="flex min-h-0 flex-1 flex-col max-lg:overflow-y-auto lg:flex-row">
       <div className="flex min-w-0 flex-col max-lg:h-[min(76dvh,860px)] max-lg:shrink-0 lg:flex-1">
         <div className="flex h-14 shrink-0 items-center gap-3 border-b border-line px-4 sm:px-5">
-          <div className="min-w-0">
-            <h1 className="text-[15px] font-semibold tracking-[-0.01em]">Report</h1>
-          </div>
-          <span className="truncate font-mono text-[12px] text-ink-faint max-sm:hidden">
+          <h1 className="text-[15px] font-semibold tracking-[-0.01em] max-sm:sr-only">Report</h1>
+          <ReportTabs projectId={project.id} current="report" />
+          <span className="truncate font-mono text-[12px] text-ink-faint max-lg:hidden">
             {filename}
           </span>
           <div className="flex-1" />

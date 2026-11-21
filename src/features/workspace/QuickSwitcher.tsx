@@ -3,6 +3,7 @@ import {
   CornerDownLeft,
   FileDown,
   FilePlus2,
+  FileText,
   FolderOpen,
   LayoutList,
   Search,
@@ -168,5 +169,6 @@ export const SWITCHER_ICONS = {
   library: <BookOpen />,
   export: <FileDown />,
   project: <LayoutList />,
+  details: <FileText />,
   projects: <FolderOpen />,
 };

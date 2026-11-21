@@ -10,10 +10,14 @@ export function today(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-/** The starting document for a project: the sections every report needs. */
+/**
+ * The starting document for a project: the sections every report needs. The
+ * summary is left empty, with a prompt in the editor, so that the report never
+ * prints a placeholder as if it had been written.
+ */
 export const PROJECT_TEMPLATE = `## Executive summary
 
-Summarise what was tested, the overall security posture and the most important actions, for a non-technical reader.
+
 
 ## Scope
 
