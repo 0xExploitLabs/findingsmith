@@ -20,7 +20,6 @@ export interface Project {
   startDate: string;
   endDate: string;
   reportDate: string;
-  version: string;
   classification: Classification;
   /** Prefix for finding IDs in the report, for example "F" gives F-01. */
   idPrefix: string;

@@ -1,4 +1,4 @@
-import { Building2, CalendarDays, FileClock, Plus, Tag, Users } from "lucide-react";
+import { Building2, CalendarDays, FileClock, Plus, Users } from "lucide-react";
 import { useRef, useState } from "react";
 import type { Project } from "../../domain/types";
 import { cx, Menu } from "../../ui/primitives";
@@ -89,16 +89,6 @@ export function ProjectPage({
               label="Report date"
               empty="Set date"
             />
-          </Property>
-          <Property icon={<Tag />} label="Version">
-            <div className="w-24">
-              <InlineText
-                value={project.version}
-                onChange={(version) => onChange({ version })}
-                placeholder="1.0"
-                label="Version"
-              />
-            </div>
           </Property>
           {EXTRAS.filter((e) => shown.has(e.key)).map((e) => (
             <Property

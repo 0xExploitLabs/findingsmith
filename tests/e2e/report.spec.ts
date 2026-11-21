@@ -293,7 +293,7 @@ test("a finding always has its main properties, and the rest come from the picke
   await expect(page.getByLabel("CWE", { exact: true })).toHaveAttribute("placeholder", "CWE-79");
   await expect(page.getByLabel("CVSS vector or score")).toHaveAttribute(
     "placeholder",
-    "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+    "CVSS:3.1/AV:N/AC:L/… or 9.8",
   );
   await expect(page.getByRole("button", { name: "Remove Endpoint" })).toHaveCount(0);
 
@@ -507,9 +507,8 @@ test("a project card stacks a page per finding behind its cover, and they follow
   await expect(card).toContainText("2 findings");
   await expect(card.locator(".stack-page")).toHaveCount(2);
   await expect(card.locator(".pixel-corner")).toHaveAttribute("data-corner", "br");
-  // The severity mix is a row of pixels, shared between the two severities found.
-  await expect(card.getByRole("img", { name: "1 Critical, 1 Medium" })).toBeVisible();
-  await expect(card.locator(".pixel-meter-cell")).toHaveCount(24);
+  // The severity mix is a chip per severity found.
+  await expect(card.getByRole("list").getByRole("listitem")).toHaveText(["1Critical", "1Medium"]);
 
   // Hovering fans the pages out, and the far one travels with the pointer.
   const far = card.locator(".stack-page").first();

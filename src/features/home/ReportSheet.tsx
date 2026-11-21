@@ -149,7 +149,7 @@ export function ReportSheet({
           className="absolute bottom-[28px] flex justify-between gap-4 text-[7.4px] leading-[1.2] text-ink-muted"
           style={{ insetInline: page.margin }}
         >
-          <span>Kestrel Security&ensp;/&ensp;Version 1.0</span>
+          <span>Kestrel Security</span>
           <span className="tabular-nums">6 / 12</span>
         </div>
       </article>
