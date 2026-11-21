@@ -30,6 +30,7 @@ Because nothing is uploaded, you can use it on an engagement without asking anyo
   Findings are Markdown with live preview: the markup hides itself and the text looks like the report.
   Type `/` for headings, tables, checklists, images and code blocks in any language.
   A table is a grid you fill in cell by cell, and an empty section tells you what belongs in it.
+  Text pasted from a web page or a chat answer keeps its inline code, bold, links, lists, tables and code blocks.
 - **Evidence where it belongs.**
   Paste or drop screenshots straight into a finding.
   HTTP requests and responses get their own highlighted blocks.
