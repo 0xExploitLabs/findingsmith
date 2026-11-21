@@ -102,7 +102,8 @@ export function Home() {
                       {project.name || "Untitled project"}
                     </a>
                     <p className="mt-0.5 truncate text-[13px] text-ink-faint">
-                      {project.client || "No client"}, edited {relative(project.updatedAt)}
+                      {project.client ? `${project.client}, edited ` : "Edited "}
+                      {relative(project.updatedAt)}
                     </p>
                     <div className="mt-6 min-h-9">
                       {findings.length === 0 ? (

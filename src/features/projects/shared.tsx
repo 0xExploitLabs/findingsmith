@@ -228,15 +228,11 @@ export function SiteShell({
 
 function NewProjectDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [name, setName] = useState("");
-  const [client, setClient] = useState("");
   useEffect(() => {
-    if (open) {
-      setName("");
-      setClient("");
-    }
+    if (open) setName("");
   }, [open]);
   const create = async () => {
-    const project = { ...createProject(name.trim() || "Untitled project"), client: client.trim() };
+    const project = createProject(name.trim() || "Untitled project");
     await db.putProject(project);
     onClose();
     navigate({ name: "project", projectId: project.id, view: "overview" });
@@ -245,9 +241,9 @@ function NewProjectDialog({ open, onClose }: { open: boolean; onClose: () => voi
     <Dialog
       open={open}
       onClose={onClose}
-      width={460}
+      width={440}
       title="New project"
-      description="One project per engagement. Everything else can be filled in later."
+      description="A name is all it needs. Everything else can be filled in as you write."
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
@@ -260,7 +256,6 @@ function NewProjectDialog({ open, onClose }: { open: boolean; onClose: () => voi
       }
     >
       <form
-        className="space-y-4"
         onSubmit={(e) => {
           e.preventDefault();
           void create();
@@ -274,16 +269,6 @@ function NewProjectDialog({ open, onClose }: { open: boolean; onClose: () => voi
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="External web application test"
-            />
-          )}
-        </Field>
-        <Field label="Client">
-          {(id) => (
-            <TextInput
-              id={id}
-              value={client}
-              onChange={(e) => setClient(e.target.value)}
-              placeholder="Northwind Traders"
             />
           )}
         </Field>

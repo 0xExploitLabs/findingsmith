@@ -1,11 +1,13 @@
-import { Download, FileText, MoreHorizontal, Search, Trash2 } from "lucide-react";
+import { Copy, Download, FileText, MoreHorizontal, PencilLine, Search, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import * as db from "../../data/db";
-import { download, exportProject, safeFilename } from "../../data/transfer";
+import { download, exportProject, importProject, safeFilename } from "../../data/transfer";
+import type { Project } from "../../domain/types";
+import { isHexColor } from "../../pdf/palette";
 import { href } from "../../state/router";
 import { useConfirm } from "../../ui/Confirm";
 import { SheetMark } from "../../ui/Plot";
-import { IconButton, Menu } from "../../ui/primitives";
+import { Button, Dialog, Field, IconButton, Menu, TextInput } from "../../ui/primitives";
 import { countSeverities, SeverityMix } from "../../ui/SeverityMix";
 import { toast } from "../../ui/toast";
 import { type ProjectRow, relative, SiteShell, useProjectActions, useProjects } from "./shared";
@@ -16,6 +18,7 @@ export function Projects() {
   const actions = useProjectActions();
   const { confirm, dialog } = useConfirm();
   const [query, setQuery] = useState("");
+  const [renaming, setRenaming] = useState<Project | null>(null);
 
   useEffect(() => {
     document.title = "Projects - Debrief";
@@ -41,6 +44,18 @@ export function Projects() {
       },
     });
 
+  /** A copy with ids of its own, made the way a project file is imported. */
+  const duplicate = async (project: Project) => {
+    try {
+      const copy = await importProject(await (await exportProject(project)).text());
+      await db.putProject({ ...copy, name: `${project.name || "Untitled project"} (copy)` });
+      await reload();
+      toast("Project duplicated");
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Could not duplicate the project", "error");
+    }
+  };
+
   return (
     <SiteShell current="projects" projectCount={rows?.length ?? null} onNewProject={actions.create}>
       <section className="mx-auto max-w-[1240px] animate-rise px-6 pb-24 pt-8 sm:pt-12">
@@ -50,7 +65,7 @@ export function Projects() {
               Projects
             </h1>
             <p className="mt-3 text-[14.5px] text-ink-muted">
-              One project per engagement. Open one to write, or go straight to its report.
+              One project per report. Open one to write, or go straight to its PDF.
             </p>
           </div>
           <div className="flex flex-wrap gap-2.5">
@@ -85,95 +100,105 @@ export function Projects() {
                 />
               </label>
             ) : null}
-            <div className="-mx-3 mt-6">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-line text-[12.5px] text-ink-faint">
-                    <th className="py-2.5 pl-3 pr-4 font-medium">Project</th>
-                    <th className="w-[32%] py-2.5 pr-4 font-medium max-sm:hidden">Findings</th>
-                    <th className="hidden w-[14%] py-2.5 pr-4 font-medium md:table-cell">
-                      Last edited
-                    </th>
-                    <th className="w-[1%] py-2.5 pr-2">
-                      <span className="sr-only">Report and actions</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {shown?.map((row) => (
-                    <Row
-                      key={row.project.id}
-                      row={row}
-                      onDelete={() => remove(row)}
-                      onExport={async () =>
-                        download(
-                          await exportProject(row.project),
-                          `${safeFilename(row.project.name)}.debrief.json`,
-                        )
-                      }
-                    />
-                  ))}
-                </tbody>
-              </table>
-              {shown?.length === 0 ? (
-                <p className="px-3 py-10 text-[13.5px] text-ink-faint">
-                  No project matches “{query.trim()}”.
-                </p>
-              ) : null}
-            </div>
+            <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {shown?.map((row) => (
+                <Card
+                  key={row.project.id}
+                  row={row}
+                  onRename={() => setRenaming(row.project)}
+                  onDuplicate={() => void duplicate(row.project)}
+                  onDelete={() => remove(row)}
+                  onExport={async () =>
+                    download(
+                      await exportProject(row.project),
+                      `${safeFilename(row.project.name)}.debrief.json`,
+                    )
+                  }
+                />
+              ))}
+            </ul>
+            {shown?.length === 0 ? (
+              <p className="py-10 text-[13.5px] text-ink-faint">
+                No project matches “{query.trim()}”.
+              </p>
+            ) : null}
           </>
         )}
       </section>
       {actions.dialog}
       {dialog}
+      <RenameDialog project={renaming} onClose={() => setRenaming(null)} onDone={reload} />
     </SiteShell>
   );
 }
 
-function Row({
+/**
+ * One project as the report it will become: its cover in miniature, then its
+ * name, what it holds and the way to its PDF.
+ */
+function Card({
   row: { project, findings },
+  onRename,
+  onDuplicate,
   onExport,
   onDelete,
 }: {
   row: ProjectRow;
+  onRename: () => void;
+  onDuplicate: () => void;
   onExport: () => void;
   onDelete: () => void;
 }) {
   const name = project.name || "Untitled project";
+  const accent = isHexColor(project.accent) ? project.accent : "#036877";
   return (
-    <tr className="group relative border-b border-line transition-colors duration-(--dur-micro) hover:bg-hover">
-      <td className="py-4 pl-3 pr-4 align-top">
+    <li className="group relative flex flex-col overflow-hidden rounded-2xl bg-surface-1 transition-[translate,box-shadow] duration-(--dur-medium) ease-(--ease-out) hover:-translate-y-1 hover:shadow-page">
+      <div aria-hidden="true" className="relative h-[148px] overflow-hidden bg-surface-2">
+        <div className="sheet absolute inset-x-7 top-6 h-[240px] overflow-hidden bg-sheet shadow-page transition-[translate] duration-(--dur-medium) ease-(--ease-out) group-hover:-translate-y-1.5">
+          <span className="absolute inset-y-0 left-0 w-[5px]" style={{ background: accent }} />
+          <span
+            className="absolute inset-y-0 left-[5px] w-[2px] opacity-40"
+            style={{ background: accent }}
+          />
+          <div className="pl-7 pr-5 pt-9">
+            <p
+              className="font-report text-[6.5px] font-bold uppercase leading-none tracking-[1.4px]"
+              style={{ color: accent }}
+            >
+              Penetration test report
+            </p>
+            <p className="mt-2 line-clamp-2 font-report text-[15px] font-extrabold leading-[1.15] text-sheet-ink">
+              {name}
+            </p>
+            {project.client ? (
+              <p className="mt-1.5 truncate font-report text-[8.5px] text-sheet-muted">
+                {project.client}
+              </p>
+            ) : null}
+            <span className="mt-3 block h-[2px] w-6" style={{ background: accent }} />
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-1 flex-col p-5">
         <a
           href={href({ name: "project", projectId: project.id, view: "overview" })}
-          className="block rounded-sm text-[15px] font-semibold tracking-[-0.01em] text-ink after:absolute after:inset-0"
+          className="block truncate rounded-sm text-[16px] font-semibold tracking-[-0.01em] text-ink after:absolute after:inset-0 after:rounded-2xl"
         >
           {name}
         </a>
-        <span className="mt-0.5 block truncate text-[13px] text-ink-faint">
-          {project.client || "No client"}
-          <span className="md:hidden">, edited {relative(project.updatedAt)}</span>
-        </span>
-        {/* Too narrow for a findings column: the counts sit under the name. */}
-        <div className="mt-2.5 sm:hidden">
+        <p className="mt-0.5 truncate text-[13px] text-ink-faint">
+          {project.client ? `${project.client}, edited ` : "Edited "}
+          <time dateTime={project.updatedAt}>{relative(project.updatedAt)}</time>
+        </p>
+        <div className="mt-4 min-h-9 flex-1">
           {findings.length === 0 ? (
             <span className="text-[13px] text-ink-faint">No findings yet</span>
           ) : (
-            <SeverityMix counts={countSeverities(findings)} className="max-w-[260px]" />
+            <SeverityMix counts={countSeverities(findings)} />
           )}
         </div>
-      </td>
-      <td className="py-4 pr-4 align-top max-sm:hidden">
-        {findings.length === 0 ? (
-          <span className="text-[13px] text-ink-faint">No findings yet</span>
-        ) : (
-          <SeverityMix counts={countSeverities(findings)} className="max-w-[280px] pt-1.5" />
-        )}
-      </td>
-      <td className="hidden py-4 pr-4 align-top text-[13px] tabular-nums text-ink-muted md:table-cell">
-        <time dateTime={project.updatedAt}>{relative(project.updatedAt)}</time>
-      </td>
-      <td className="relative z-[1] py-3 pr-2 align-top">
-        <div className="flex items-center justify-end gap-1">
+        <div className="relative z-[1] mt-4 flex items-center justify-between gap-2">
           <a
             href={href({ name: "project", projectId: project.id, view: "report" })}
             aria-label={`Report for ${name}`}
@@ -184,12 +209,22 @@ function Row({
           </a>
           <Menu
             align="end"
-            width={180}
+            width={190}
             items={[
+              { value: "rename", label: "Rename", icon: <PencilLine /> },
+              { value: "duplicate", label: "Duplicate", icon: <Copy /> },
               { value: "export", label: "Export file", icon: <Download /> },
               { value: "delete", label: "Delete", icon: <Trash2 />, danger: true },
             ]}
-            onSelect={(v) => (v === "export" ? onExport() : onDelete())}
+            onSelect={(v) =>
+              v === "rename"
+                ? onRename()
+                : v === "duplicate"
+                  ? onDuplicate()
+                  : v === "export"
+                    ? onExport()
+                    : onDelete()
+            }
             trigger={({ toggle, ref, open }) => (
               <IconButton
                 ref={ref}
@@ -202,7 +237,70 @@ function Row({
             )}
           />
         </div>
-      </td>
-    </tr>
+      </div>
+    </li>
+  );
+}
+
+function RenameDialog({
+  project,
+  onClose,
+  onDone,
+}: {
+  project: Project | null;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [name, setName] = useState("");
+  useEffect(() => {
+    if (project) setName(project.name);
+  }, [project]);
+  const save = async () => {
+    if (!project) return;
+    await db.putProject({
+      ...project,
+      name: name.trim() || "Untitled project",
+      updatedAt: new Date().toISOString(),
+    });
+    onClose();
+    onDone();
+  };
+  return (
+    <Dialog
+      open={!!project}
+      onClose={onClose}
+      width={440}
+      title="Rename project"
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={save}>
+            Rename
+          </Button>
+        </>
+      }
+    >
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void save();
+        }}
+      >
+        <Field label="Project name">
+          {(id) => (
+            <TextInput
+              id={id}
+              data-autofocus
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onFocus={(e) => e.target.select()}
+            />
+          )}
+        </Field>
+        <button type="submit" hidden />
+      </form>
+    </Dialog>
   );
 }
