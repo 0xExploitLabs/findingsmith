@@ -1,3 +1,8 @@
+/* Hallmark · shape: app screen · genre: modern-minimal · theme: brand · redesign: full
+ * paper: oklch(16% 0.004 286) dark, oklch(96% 0.008 217) light · accent: oklch(78% 0.134 212) dark, oklch(48% 0.082 212) light · display: 0x Sans · body: 0x Sans
+ * nav: kept (a top bar on home, the project sidebar in the workspace) · signature: the findings ledger, each finding's severity and score in one line · states: empty, loading, error, full
+ * axes: dark ink paper/grotesk/cyan signal · posture: restrained · contrast: pass · v2.0.0 */
+/* Hallmark · pre-emit critique: P4 H4 E4 S4 R4 V3 · weakest: V, the shell is kept; home now leads with real pages the app rendered instead of a drawing */
 @import "tailwindcss";
 
 @font-face {
@@ -99,8 +104,12 @@
   --shadow-pop:
     0 1px 0 rgb(var(--brand-ink) / 0.06) inset, 0 18px 50px -12px rgb(var(--brand-shadow) / 0.55),
     0 4px 14px -6px rgb(var(--brand-shadow) / 0.4);
-  --animate-in: pop-in 140ms cubic-bezier(0.2, 0.8, 0.2, 1);
-  --animate-fade: fade-in 160ms ease-out;
+  --animate-in: pop-in var(--dur-micro) var(--ease-out);
+  --animate-fade: fade-in var(--dur-short) var(--ease-out);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --dur-micro: 120ms;
+  --dur-short: 220ms;
 }
 
 @keyframes pop-in {
@@ -121,6 +130,20 @@
   body,
   #root {
     height: 100%;
+  }
+  html,
+  body {
+    overflow-x: clip;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+    overflow-wrap: break-word;
+    min-width: 0;
+  }
+  p {
+    text-wrap: pretty;
   }
   /* Code, payloads and URLs are shown exactly as typed: no "//" or "!=" drawn as one glyph. */
   code,
@@ -605,4 +628,16 @@
 }
 .doc-editor .cm-lp-close + .cm-line:not(.cm-lp-codeline) {
   padding-top: 8px;
+}
+
+/* Unlayered, so it wins over every Tailwind utility without !important. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+    transition-duration: 0.01ms;
+    scroll-behavior: auto;
+  }
 }
