@@ -455,7 +455,8 @@ export function DocEditor({
             { key: "Mod-b", run: wrap("**") },
             { key: "Mod-i", run: wrap("_") },
             { key: "Mod-e", run: wrap("`", "`", "code") },
-            { key: "Mod-k", run: link },
+            // Mod-k opens search everywhere in the workspace, so the link moves beside it.
+            { key: "Mod-Shift-k", run: link, preventDefault: true },
             { key: "Mod-Shift-x", run: wrap("~~") },
             indentWithTab,
             ...defaultKeymap,

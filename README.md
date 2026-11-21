@@ -18,7 +18,7 @@ There is no account and no server: projects are stored in your browser's Indexed
 - **All your projects in one place.**
   The Projects page lists every engagement with its severity mix and a direct link to its report.
 - **Find anything.**
-  Press Ctrl+P (Cmd+P on macOS) to jump to a finding or run a command.
+  Press Ctrl+K (Cmd+K on macOS) to jump to a finding or run a command.
 - **Severity you can defend.**
   Paste a CVSS 3.1 or 4.0 vector, or a bare base score from another tool, and the severity is derived from it using the rating scale in the CVSS specification, so a 5.3 is always Medium.
   To rate a finding differently, pick another severity and give a reason; the report prints both ratings and the reason.

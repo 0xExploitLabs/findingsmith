@@ -324,6 +324,29 @@ test("a code block names its language and lets you change it", async ({ page }) 
   await expect(page.getByRole("button", { name: "Code language: JSON" })).toBeVisible();
 });
 
+test("Ctrl+K opens search, in the editor too, where the link shortcut moved aside", async ({
+  page,
+}) => {
+  await newProject(page);
+  await blankFinding(page, "Shortcuts");
+  await expect(page.getByRole("button", { name: /^Search/ })).toContainText("K");
+  const editor = page.locator("article .cm-content");
+  await editor.locator(".cm-line").nth(2).click();
+  await page.keyboard.type("See the advisory");
+
+  await page.keyboard.press("Control+k");
+  const search = page.getByLabel("Search findings and commands");
+  await expect(search).toBeFocused();
+  await search.fill("short");
+  await expect(page.getByRole("dialog").getByRole("button", { name: /Shortcuts/ })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(search).toHaveCount(0);
+  // Ctrl+K left the text alone; Ctrl+Shift+K is the link now.
+  await expect(editor).not.toContainText("](");
+  await page.keyboard.press("Control+Shift+k");
+  await expect(editor).toContainText("[link text](https://)");
+});
+
 test("a project can be renamed and duplicated from the projects page", async ({ page }) => {
   await newProject(page);
   await page.goto("/#/projects");
