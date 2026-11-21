@@ -12,11 +12,13 @@ import {
   Search,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { LIBRARY } from "../../data/library";
 import { formatScore } from "../../domain/cvss";
 import { compareFindings, rate } from "../../domain/severity";
-import { type Finding, type Project, SEVERITIES } from "../../domain/types";
+import type { Finding, Project } from "../../domain/types";
 import { href, type Route } from "../../state/router";
 import { cx, IconButton, Kbd, Menu, SEVERITY_CLASS } from "../../ui/primitives";
+import { countSeverities, SeverityMix } from "../../ui/SeverityMix";
 import { ThemeToggle } from "../../ui/ThemeToggle";
 import { Wordmark } from "../../ui/Wordmark";
 
@@ -55,14 +57,7 @@ export function Sidebar({
     [findings, sort],
   );
 
-  const counts = useMemo(() => {
-    const c = Object.fromEntries(SEVERITIES.map((s) => [s, 0])) as Record<
-      (typeof SEVERITIES)[number],
-      number
-    >;
-    for (const f of findings) c[rate(f).severity]++;
-    return c;
-  }, [findings]);
+  const counts = useMemo(() => countSeverities(findings), [findings]);
 
   const activeFinding = route.name === "finding" ? route.findingId : null;
   const view = route.name === "project" ? route.view : null;
@@ -135,11 +130,9 @@ export function Sidebar({
         </a>
       </div>
 
-      <div className="mt-5 flex items-center gap-1 px-4">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.09em] text-ink-faint">
-          Findings
-        </span>
-        <span className="font-mono text-[11px] text-ink-faint">{findings.length}</span>
+      <div className="mt-5 flex items-center gap-1.5 pl-4 pr-3">
+        <h2 className="text-[13px] font-semibold text-ink">Findings</h2>
+        <span className="text-[13px] tabular-nums text-ink-faint">{findings.length}</span>
         <div className="flex-1" />
         <Menu
           align="end"
@@ -195,24 +188,30 @@ export function Sidebar({
         />
       </div>
 
+      <SeverityMix counts={counts} bar={false} className="px-4 pb-1 pt-1" />
+
       <div className="mt-2 min-h-0 flex-1 overflow-y-auto px-2 pb-3">
         {findings.length === 0 ? (
-          <div className="mx-2 mt-2 rounded-xl border border-dashed border-line-strong px-4 py-6 text-center">
-            <p className="text-[13px] text-ink-muted">No findings yet.</p>
-            <div className="mt-3 flex flex-col gap-1.5">
+          <div className="mx-2 mt-1 rounded-xl bg-surface-2 px-4 py-5">
+            <p className="text-[13px] text-ink">No findings yet.</p>
+            <p className="mt-1 text-[12.5px] leading-snug text-ink-faint">
+              Start from one of {LIBRARY.length} written findings, or from a blank page.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={onOpenLibrary}
-                className="text-[13px] font-medium text-accent hover:underline"
+                className="flex h-8 items-center gap-1.5 rounded-lg bg-accent px-3 text-[13px] font-medium text-ink-inverse transition-colors duration-(--dur-micro) hover:bg-accent-deep active:translate-y-px [&_svg]:size-3.5"
               >
+                <BookOpen />
                 Browse the library
               </button>
               <button
                 type="button"
                 onClick={onNewFinding}
-                className="text-[13px] text-ink-muted hover:text-ink"
+                className="flex h-8 items-center rounded-lg px-2.5 text-[13px] text-ink-muted transition-colors duration-(--dur-micro) hover:bg-hover hover:text-ink"
               >
-                or start blank
+                Start blank
               </button>
             </div>
           </div>
@@ -257,17 +256,10 @@ export function Sidebar({
                   href={href({ name: "finding", projectId: project.id, findingId: f.id })}
                   aria-current={active ? "page" : undefined}
                   className={cx(
-                    "relative flex gap-2.5 rounded-lg py-2 pl-3 pr-2.5 transition-colors",
+                    "relative flex gap-2.5 rounded-lg px-2.5 py-2 transition-colors duration-(--dur-micro)",
                     active ? "bg-surface-3" : "hover:bg-hover",
                   )}
                 >
-                  <span
-                    className={cx(
-                      "absolute bottom-2 left-0 top-2 w-[3px] rounded-r",
-                      SEVERITY_CLASS[r.severity].dot,
-                      !active && "opacity-80",
-                    )}
-                  />
                   <span className="min-w-0 flex-1">
                     <span
                       className={cx(
@@ -277,13 +269,13 @@ export function Sidebar({
                     >
                       {f.title || "Untitled finding"}
                     </span>
-                    <span className="mt-1 flex items-center gap-2 text-[11.5px] text-ink-faint">
-                      <span className="font-mono">{refs.get(f.id)}</span>
-                      <span className={SEVERITY_CLASS[r.severity].text}>{r.severity}</span>
-                      {r.cvss ? (
-                        <span className="font-mono">{formatScore(r.cvss.score)}</span>
-                      ) : null}
-                      {f.status !== "Open" ? <span className="truncate">· {f.status}</span> : null}
+                    <span className="mt-1 flex items-center gap-2 text-[12px] tabular-nums text-ink-faint">
+                      <span className="font-mono text-[11.5px]">{refs.get(f.id)}</span>
+                      <span className={cx("font-medium", SEVERITY_CLASS[r.severity].text)}>
+                        {r.severity}
+                        {r.cvss ? ` ${formatScore(r.cvss.score)}` : ""}
+                      </span>
+                      {f.status !== "Open" ? <span className="truncate">{f.status}</span> : null}
                     </span>
                   </span>
                   {canDrag ? (
@@ -296,45 +288,12 @@ export function Sidebar({
         </ul>
       </div>
 
-      <div className="border-t border-line px-4 py-3">
-        {findings.length > 0 ? (
-          <div className="mb-3">
-            <div className="flex h-1.5 overflow-hidden rounded-full bg-surface-3">
-              {SEVERITIES.filter((s) => counts[s] > 0).map((s) => (
-                <div
-                  key={s}
-                  className={cx(
-                    "h-full border-r border-surface-1 last:border-r-0",
-                    SEVERITY_CLASS[s].dot,
-                  )}
-                  style={{ flex: counts[s] }}
-                  title={`${counts[s]} ${s}`}
-                />
-              ))}
-            </div>
-            <div className="mt-2 flex justify-between text-[11.5px]">
-              {SEVERITIES.map((s) => (
-                <span key={s} title={s} className="flex items-center gap-1.5">
-                  <span
-                    className={cx(
-                      "size-1.5 rounded-[2px]",
-                      SEVERITY_CLASS[s].dot,
-                      counts[s] === 0 && "opacity-35",
-                    )}
-                  />
-                  <span className={cx("font-mono", counts[s] > 0 ? "text-ink" : "text-ink-faint")}>
-                    {counts[s]}
-                  </span>
-                </span>
-              ))}
-            </div>
-          </div>
-        ) : null}
+      <div className="border-t border-line px-4 py-2.5">
         <div className="flex items-center justify-between">
           <span
             role="status"
             className={cx(
-              "flex items-center gap-1.5 text-[11.5px] [&_svg]:size-3.5",
+              "flex items-center gap-1.5 text-[12px] [&_svg]:size-3.5",
               saveState === "error" ? "text-danger" : "text-ink-faint",
             )}
           >
