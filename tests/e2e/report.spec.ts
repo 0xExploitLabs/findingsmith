@@ -67,6 +67,33 @@ test("the projects page lists every project and opens its report", async ({ page
   await expect(page).toHaveURL(/#\/projects$/);
 });
 
+test("on a phone the project menu is a drawer, and the library still adds a finding", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await newProject(page);
+  const nav = page.locator("#project-nav");
+  await expect(nav).toBeHidden();
+  await page.getByRole("button", { name: "Open project menu" }).click();
+  await expect(nav).toBeVisible();
+
+  // One pane at a time: the list, then the template with its way in.
+  await page.getByRole("button", { name: "Browse the library" }).click();
+  await page.getByLabel("Search the library").fill("IDOR");
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("button", { name: "Add finding" })).toBeHidden();
+  await dialog.getByRole("option").first().click();
+  await dialog.getByRole("button", { name: "Add finding" }).click();
+
+  await expect(page.getByLabel("Title", { exact: true })).toHaveValue(
+    "Insecure direct object reference",
+  );
+  await expect(nav).toBeHidden();
+  // The document has the screen to itself: its title is not squeezed by a sidebar.
+  const title = await page.getByLabel("Title", { exact: true }).boundingBox();
+  expect(title?.width).toBeGreaterThan(300);
+});
+
 test("severity follows the CVSS score: 5.3 is Medium", async ({ page }) => {
   await newProject(page);
   await blankFinding(page, "Verbose error messages");
