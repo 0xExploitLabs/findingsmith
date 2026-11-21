@@ -72,9 +72,7 @@ export function LibraryDialog({
           className="hidden w-[210px] shrink-0 flex-col overflow-y-auto border-r border-line bg-surface-2/50 p-2 md:flex"
           aria-label="Categories"
         >
-          <div className="px-2.5 pb-2 pt-2 text-[11px] font-semibold uppercase tracking-[0.09em] text-ink-faint">
-            Categories
-          </div>
+          <h2 className="px-2.5 pb-2 pt-2 text-[12.5px] font-medium text-ink-faint">Categories</h2>
           {(["All", ...LIBRARY_CATEGORIES] as Category[]).map((c) => (
             <button
               key={c}
@@ -91,7 +89,7 @@ export function LibraryDialog({
               )}
             >
               <span className="truncate">{c}</span>
-              <span className="font-mono text-[11px] text-ink-faint">
+              <span className="text-[12px] tabular-nums text-ink-faint">
                 {c === "All" ? LIBRARY.length : (counts.get(c) ?? 0)}
               </span>
             </button>
@@ -154,21 +152,16 @@ export function LibraryDialog({
                       selected?.id === e.id ? "bg-surface-3" : "hover:bg-hover",
                     )}
                   >
-                    <span
-                      className={cx(
-                        "mt-[7px] size-2 shrink-0 rounded-[2px]",
-                        s && SEVERITY_CLASS[s.severity].dot,
-                      )}
-                    />
                     <span className="min-w-0 flex-1">
                       <span className="block text-[13px] leading-snug text-ink">{e.title}</span>
-                      <span className="mt-0.5 block truncate text-[11.5px] text-ink-faint">
-                        {e.category} · {e.cwe}
+                      <span className="mt-0.5 flex gap-3 truncate text-[12px] text-ink-faint">
+                        <span>{e.category}</span>
+                        <span>{e.cwe}</span>
                       </span>
                     </span>
                     <span
                       className={cx(
-                        "mt-0.5 font-mono text-[11.5px]",
+                        "mt-0.5 font-mono text-[12px] font-semibold tabular-nums",
                         s && SEVERITY_CLASS[s.severity].text,
                       )}
                     >
@@ -185,12 +178,10 @@ export function LibraryDialog({
           {selected && score ? (
             <>
               <div className="border-b border-line px-6 pb-4 pt-5">
-                <div className="flex items-center gap-2 text-[12px] text-ink-faint">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-ink-faint">
                   <span>{selected.category}</span>
-                  <span>·</span>
-                  <span className="font-mono">{selected.cwe}</span>
-                  <span>·</span>
-                  <span className="truncate">{selected.owasp}</span>
+                  <span className="font-mono text-[12px]">{selected.cwe}</span>
+                  <span className="truncate">OWASP {selected.owasp}</span>
                 </div>
                 <h2 className="mt-1.5 text-[19px] font-semibold tracking-[-0.015em]">
                   {selected.title}
@@ -220,9 +211,7 @@ export function LibraryDialog({
                   ] as const
                 ).map(([label, md]) => (
                   <div key={label} className="border-b border-line last:border-b-0">
-                    <div className="px-6 pt-4 text-[11px] font-semibold uppercase tracking-[0.09em] text-accent">
-                      {label}
-                    </div>
+                    <h3 className="px-6 pt-4 text-[14px] font-semibold text-ink">{label}</h3>
                     <Preview source={md} className="px-6 pb-4 pt-2" />
                   </div>
                 ))}
