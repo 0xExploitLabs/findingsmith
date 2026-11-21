@@ -310,11 +310,13 @@ export function FindingEditor({
                         aria-expanded={open}
                         aria-label="HTTP method"
                         className={cx(
-                          "h-7 shrink-0 rounded-md border border-line-strong px-2 font-mono text-[11.5px] font-semibold hover:bg-hover",
-                          finding.method ? "text-accent" : "text-ink-faint",
+                          "h-7 shrink-0 rounded-md border border-line-strong px-2 transition-colors duration-(--dur-micro) hover:bg-hover",
+                          finding.method
+                            ? "font-mono text-[12px] font-semibold text-accent"
+                            : "text-[13px] text-ink-faint",
                         )}
                       >
-                        {finding.method || "METHOD"}
+                        {finding.method || "Method"}
                       </button>
                     )}
                   />
@@ -372,7 +374,7 @@ export function FindingEditor({
         ) : null}
 
         {rating.source === "override" && finding.override?.reason ? (
-          <p className="mt-4 rounded-lg border-l-2 border-line-strong bg-surface-1 px-3.5 py-2.5 text-[13px] leading-relaxed text-ink-muted">
+          <p className="mt-4 rounded-lg bg-surface-2 px-4 py-3 text-[13.5px] leading-relaxed text-ink-muted">
             <span className="font-medium text-ink">Why {rating.severity}:</span>{" "}
             {finding.override.reason}
           </p>
@@ -431,12 +433,7 @@ export function FindingEditor({
 }
 
 function SeverityLabel({ severity }: { severity: Severity }) {
-  return (
-    <span className={cx("flex items-center gap-2 font-medium", SEVERITY_CLASS[severity].text)}>
-      <span className={cx("size-2 rounded-[2px]", SEVERITY_CLASS[severity].dot)} />
-      {severity}
-    </span>
-  );
+  return <span className={cx("font-medium", SEVERITY_CLASS[severity].text)}>{severity}</span>;
 }
 
 /**
