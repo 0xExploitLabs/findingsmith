@@ -1,11 +1,22 @@
-import { Copy, Download, FileText, MoreHorizontal, PencilLine, Search, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import {
+  ArrowUpRight,
+  Copy,
+  Download,
+  FileText,
+  MoreHorizontal,
+  PencilLine,
+  Search,
+  Trash2,
+} from "lucide-react";
+import { type CSSProperties, useEffect, useMemo, useState } from "react";
 import * as db from "../../data/db";
 import { download, exportProject, importProject, safeFilename } from "../../data/transfer";
+import { compareFindings, rate, SEVERITY_HEX } from "../../domain/severity";
 import type { Project } from "../../domain/types";
 import { isHexColor } from "../../pdf/palette";
 import { href } from "../../state/router";
 import { useConfirm } from "../../ui/Confirm";
+import { PixelCorner } from "../../ui/motion";
 import { SheetMark } from "../../ui/Plot";
 import { Button, Dialog, Field, IconButton, Menu, TextInput } from "../../ui/primitives";
 import { countSeverities, SeverityMix } from "../../ui/SeverityMix";
@@ -132,9 +143,14 @@ export function Projects() {
   );
 }
 
+/** How many finding pages show behind a cover, however many findings there are. */
+const STACK = 3;
+
 /**
- * One project as the report it will become: its cover in miniature, then its
- * name, what it holds and the way to its PDF.
+ * One project as the report it will become: its cover in miniature with a
+ * page behind it for each of its gravest findings, then its name, what it
+ * holds and the way to its PDF. The pages fan out under the pointer and shift
+ * with it, the far ones most.
  */
 function Card({
   row: { project, findings },
@@ -151,16 +167,70 @@ function Card({
 }) {
   const name = project.name || "Untitled project";
   const accent = isHexColor(project.accent) ? project.accent : "#036877";
+  const pages = useMemo(() => [...findings].sort(compareFindings).slice(0, STACK), [findings]);
+  const prefix = project.idPrefix || "F";
   return (
-    <li className="group relative flex flex-col overflow-hidden rounded-2xl bg-surface-1 transition-[translate,box-shadow] duration-(--dur-medium) ease-(--ease-out) hover:-translate-y-1 hover:shadow-page">
-      <div aria-hidden="true" className="relative h-[148px] overflow-hidden bg-surface-2">
-        <div className="sheet absolute inset-x-7 top-6 h-[240px] overflow-hidden bg-sheet shadow-page transition-[translate] duration-(--dur-medium) ease-(--ease-out) group-hover:-translate-y-1.5">
+    <li
+      className="group relative flex flex-col overflow-hidden rounded-2xl bg-surface-1 transition-[translate,box-shadow] duration-(--dur-medium) ease-(--ease-out) hover:-translate-y-1 hover:shadow-page"
+      onPointerMove={(e) => {
+        if (e.pointerType !== "mouse" || matchMedia("(prefers-reduced-motion: reduce)").matches)
+          return;
+        const box = e.currentTarget.getBoundingClientRect();
+        const style = e.currentTarget.style;
+        style.setProperty("--mx", (((e.clientX - box.left) / box.width) * 2 - 1).toFixed(3));
+        style.setProperty("--my", (((e.clientY - box.top) / box.height) * 2 - 1).toFixed(3));
+      }}
+      onPointerLeave={(e) => {
+        e.currentTarget.style.removeProperty("--mx");
+        e.currentTarget.style.removeProperty("--my");
+      }}
+    >
+      <div
+        aria-hidden="true"
+        data-pages={pages.length}
+        className="relative h-[164px] overflow-hidden bg-surface-2"
+      >
+        {[...pages].reverse().map((finding, i) => {
+          const depth = pages.length - i;
+          const severity = rate(finding).severity;
+          return (
+            <div
+              key={finding.id}
+              className="stack-page sheet absolute left-7 top-7 h-[240px] overflow-hidden bg-sheet shadow-page"
+              style={{ "--k": depth, right: 28 + pages.length * 10 } as CSSProperties}
+            >
+              <span
+                className="absolute inset-x-0 top-0 h-[3px]"
+                style={{ background: SEVERITY_HEX[severity] }}
+              />
+              <p className="flex items-center justify-end gap-1.5 pr-2.5 pt-3 font-mono text-[7px] font-bold leading-none text-sheet-muted">
+                {severity}
+                <span style={{ color: SEVERITY_HEX[severity] }}>
+                  {prefix}-{String(pages.indexOf(finding) + 1).padStart(2, "0")}
+                </span>
+              </p>
+              <div className="ml-auto mt-3 w-2/5 space-y-[5px] pr-2.5">
+                {[100, 82, 94, 60].map((width) => (
+                  <span
+                    key={width}
+                    className="ml-auto block h-[3px] rounded-full bg-sheet-rule"
+                    style={{ width: `${width}%` }}
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        })}
+        <div
+          className="stack-cover sheet absolute left-7 top-7 h-[240px] overflow-hidden bg-sheet shadow-page"
+          style={{ right: 28 + pages.length * 10 }}
+        >
           <span className="absolute inset-y-0 left-0 w-[5px]" style={{ background: accent }} />
           <span
             className="absolute inset-y-0 left-[5px] w-[2px] opacity-40"
             style={{ background: accent }}
           />
-          <div className="pl-7 pr-5 pt-9">
+          <div className="pl-7 pr-5 pt-8">
             <p
               className="font-report text-[6.5px] font-bold uppercase leading-none tracking-[1.4px]"
               style={{ color: accent }}
@@ -179,21 +249,29 @@ function Card({
           </div>
         </div>
       </div>
+      <PixelCorner />
 
       <div className="flex flex-1 flex-col p-5">
         <a
           href={href({ name: "project", projectId: project.id, view: "overview" })}
-          className="block truncate rounded-sm text-[16px] font-semibold tracking-[-0.01em] text-ink after:absolute after:inset-0 after:rounded-2xl"
+          className="flex items-center gap-1.5 rounded-sm text-[16px] font-semibold tracking-[-0.01em] text-ink after:absolute after:inset-0 after:rounded-2xl"
         >
-          {name}
+          <span className="truncate">{name}</span>
+          <ArrowUpRight className="size-4 shrink-0 -translate-x-1 text-ink-faint opacity-0 transition-[opacity,translate] duration-(--dur-short) ease-(--ease-out) group-hover:translate-x-0 group-hover:opacity-100 group-focus-within:translate-x-0 group-focus-within:opacity-100" />
         </a>
         <p className="mt-0.5 truncate text-[13px] text-ink-faint">
-          {project.client ? `${project.client}, edited ` : "Edited "}
+          {project.client ? `${project.client} · ` : ""}
+          {findings.length === 0
+            ? "No findings yet"
+            : `${findings.length} finding${findings.length === 1 ? "" : "s"}`}
+          {" · edited "}
           <time dateTime={project.updatedAt}>{relative(project.updatedAt)}</time>
         </p>
         <div className="mt-4 min-h-9 flex-1">
           {findings.length === 0 ? (
-            <span className="text-[13px] text-ink-faint">No findings yet</span>
+            <span className="text-[13px] text-ink-faint">
+              Open it to add the first from the library.
+            </span>
           ) : (
             <SeverityMix counts={countSeverities(findings)} />
           )}

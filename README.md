@@ -18,7 +18,7 @@ There is no account and no server: projects are stored in your browser's Indexed
   Endpoint and method, parameter, host, port, affected assets, CWE and CVE are added from the "Add property" picker, so a finding only shows what applies to it.
   Usual sections such as Impact or Remediation are one click away under the write-up.
 - **All your projects in one place.**
-  The Projects page lists every engagement with its severity mix and a direct link to its report.
+  The Projects page shows every engagement as its report: the cover with a page behind it for each of its gravest findings, its severity mix and a direct link to the PDF.
 - **Find anything.**
   Press Ctrl+K (Cmd+K on macOS) to jump to a finding or run a command.
 - **Severity you can defend.**
