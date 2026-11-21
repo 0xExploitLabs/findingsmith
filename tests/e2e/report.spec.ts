@@ -5,10 +5,20 @@ import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 async function newProject(page: Page) {
   await page.goto("/");
   await page.getByRole("button", { name: "New project" }).first().click();
+  // A name is all a new project asks for.
+  await expect(page.getByRole("dialog").getByRole("textbox")).toHaveCount(1);
   await page.getByLabel("Project name").fill("External web application test");
-  await page.getByLabel("Client").fill("Northwind Traders");
   await page.getByRole("button", { name: "Create project" }).click();
-  await expect(page.getByLabel("Title")).toHaveValue("External web application test");
+  await expect(page.getByLabel("Title", { exact: true })).toHaveValue(
+    "External web application test",
+  );
+}
+
+/** The client is optional: it is added to the project when the report states one. */
+async function setClient(page: Page, client: string) {
+  await page.getByRole("button", { name: "Add property" }).click();
+  await page.getByRole("menuitem", { name: /Client/ }).click();
+  await page.getByLabel("Client", { exact: true }).fill(client);
 }
 
 async function pdfText(path: string) {
@@ -159,24 +169,80 @@ test("typing a code fence closes it, so the text after stays prose", async ({ pa
   ).toBeVisible();
 });
 
-test("optional properties come from the picker", async ({ page }) => {
+test("a finding always has its main properties, and the rest come from the picker", async ({
+  page,
+}) => {
   await newProject(page);
   await blankFinding(page, "Open redirect");
-  await expect(page.getByLabel("Endpoint URL")).toHaveCount(0);
-  await page.getByRole("button", { name: "Add property" }).click();
-  await page.getByRole("menuitem", { name: /Endpoint/ }).click();
-  await expect(page.getByLabel("Endpoint URL")).toBeFocused();
-  await page.keyboard.type("https://app.example.com/login?next=");
+  // Endpoint, host and CWE are there to fill from the start.
+  await page.getByLabel("Endpoint URL").fill("https://app.example.com/login?next=");
   await page.getByRole("button", { name: "HTTP method" }).click();
   await page.getByRole("menuitem", { name: "GET" }).click();
   await expect(page.getByRole("button", { name: "HTTP method" })).toHaveText("GET");
+  await expect(page.getByLabel("Host", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("CWE", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Remove Endpoint" })).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Remove Endpoint" }).click();
-  await expect(page.getByLabel("Endpoint URL")).toHaveCount(0);
+  await expect(page.getByLabel("Parameter", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Add property" }).click();
+  await page.getByRole("menuitem", { name: /Parameter/ }).click();
+  await expect(page.getByLabel("Parameter", { exact: true })).toBeFocused();
+  await page.keyboard.type("next");
+  await page.getByRole("button", { name: "Remove Parameter" }).click();
+  await expect(page.getByLabel("Parameter", { exact: true })).toHaveCount(0);
+});
+
+test("the CVSS calculator builds the vector, and the severity follows", async ({ page }) => {
+  await newProject(page);
+  await blankFinding(page, "Unauthenticated admin API");
+  await page.getByRole("button", { name: "Calculate" }).click();
+  const dialog = page.getByRole("dialog");
+  for (const metric of ["Confidentiality", "Integrity", "Availability"]) {
+    await dialog
+      .getByRole("group", { name: new RegExp(metric) })
+      .getByText("High")
+      .click();
+  }
+  await expect(dialog).toContainText("9.8");
+  await dialog.getByRole("button", { name: "Use this score" }).click();
+  await expect(page.getByLabel("CVSS vector or score")).toHaveValue(
+    "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+  );
+  await expect(page.locator("dd").first()).toContainText("Critical");
+});
+
+test("typing / opens a menu of blocks, filtered as you type", async ({ page }) => {
+  await newProject(page);
+  await blankFinding(page, "Slash menu");
+  const editor = page.locator("article .cm-content");
+  await editor.locator(".cm-line").nth(2).click();
+  await page.keyboard.type("/");
+  const menu = page.locator(".cm-tooltip-autocomplete");
+  await expect(menu).toContainText("Basic formatting");
+  await expect(menu.getByRole("option", { name: /Heading 1/ })).toBeVisible();
+  await page.keyboard.type("tab");
+  await expect(menu.getByRole("option")).toHaveCount(1);
+  await page.keyboard.press("Enter");
+  await expect(editor).toContainText("| --- | --- |");
+});
+
+test("a project can be renamed and duplicated from the projects page", async ({ page }) => {
+  await newProject(page);
+  await page.goto("/#/projects");
+  await page.getByRole("button", { name: "Actions for External web application test" }).click();
+  await page.getByRole("menuitem", { name: "Rename" }).click();
+  await page.getByLabel("Project name").fill("Retest, Q3");
+  await page.getByRole("button", { name: "Rename", exact: true }).click();
+  await expect(page.getByRole("link", { name: "Retest, Q3", exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Actions for Retest, Q3" }).click();
+  await page.getByRole("menuitem", { name: "Duplicate" }).click();
+  await expect(page.getByRole("link", { name: "Retest, Q3 (copy)", exact: true })).toBeVisible();
 });
 
 test("the PDF is a clean report: no Markdown, no watermark", async ({ page }) => {
   await newProject(page);
+  await setClient(page, "Northwind Traders");
   await page.getByRole("button", { name: "Browse the library" }).click();
   await page.getByLabel("Search the library").fill("IDOR");
   await page.getByRole("dialog").getByRole("button", { name: "Add finding" }).click();
@@ -196,9 +262,7 @@ test("the PDF is a clean report: no Markdown, no watermark", async ({ page }) =>
   await page.keyboard.press("Enter");
   await page.keyboard.type("```");
 
-  await page.getByRole("button", { name: "Add property" }).click();
-  await page.getByRole("menuitem", { name: /Endpoint/ }).click();
-  await page.keyboard.type("https://app.example.com/api/invoices/{id}");
+  await page.getByLabel("Endpoint URL").fill("https://app.example.com/api/invoices/{id}");
 
   await page.getByRole("link", { name: "Export PDF" }).click();
   await page.getByLabel("Prepared by").fill("Kestrel Security");
