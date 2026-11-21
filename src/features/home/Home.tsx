@@ -1,5 +1,6 @@
 import { ArrowUpRight } from "lucide-react";
 import { useEffect } from "react";
+import { APP_NAME } from "../../brand";
 import { href } from "../../state/router";
 import { FlowIn, PixelCorner, SwapHeadline, useScrollProgress } from "../../ui/motion";
 import { PixelField } from "../../ui/PixelField";
@@ -22,13 +23,13 @@ const FACTS = [
   ],
 ] as const;
 
-/** The overview: what Debrief is, the product working, and your latest work. */
+/** The overview: what the tool is, the product working, and your latest work. */
 export function Home() {
   const { rows } = useProjects();
   const actions = useProjectActions();
 
   useEffect(() => {
-    document.title = "Debrief - pentest report writer";
+    document.title = `${APP_NAME} - pentest report writer`;
   }, []);
 
   const recent = rows?.slice(0, 3) ?? [];

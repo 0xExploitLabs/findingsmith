@@ -1,26 +1,27 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/banner-dark.png">
-    <img src="docs/banner-light.png" alt="Debrief: pentest reports, written like notes" width="100%">
+    <img src="docs/banner-light.png" alt="Findingsmith: pentest reports, written like notes" width="100%">
   </picture>
 </p>
 
-# Debrief
+# Findingsmith, by 0xExploitLabs
 
-Debrief is a penetration test report writer that runs entirely in your browser.
+Findingsmith is a penetration test report writer that runs entirely in your browser.
 You write each finding like a note, give it a CVSS vector and your evidence, and download a typeset PDF your client can read.
 There is no account and no server: your projects live in your browser and never leave your device.
 
-Made by [0xExploitLabs](https://github.com/0xExploitLabs).
+Made by [0xExploitLabs](https://0xexploitlabs.org).
+Use it at [findingsmith.0xexploitlabs.org](https://findingsmith.0xexploitlabs.org).
 
-![A finding open in Debrief, with its properties and write-up](docs/workspace.png)
+![A finding open in Findingsmith, with its properties and write-up](docs/workspace.png)
 
 ## Why
 
 Most of a pentest report is formatting.
 The findings are already in your notes, and the hours go into moving them to a Word template, fixing the numbering and arguing with tables.
 
-Debrief lets you write the report the way you take notes and lays it out for you.
+Findingsmith lets you write the report the way you take notes and lays it out for you.
 Because nothing is uploaded, you can use it on an engagement without asking anyone where client data ends up.
 
 ## What you get
@@ -44,7 +45,7 @@ Because nothing is uploaded, you can use it on an engagement without asking anyo
   You choose its colour and logo.
   No tool name or watermark appears anywhere in the file.
 - **Checks before you send.**
-  Debrief tells you which findings still lack a title, a write-up, remediation or a score.
+  Findingsmith tells you which findings still lack a title, a write-up, remediation or a score.
 - **Your data stays yours.**
   Everything is stored in your browser's IndexedDB.
   Export a project to one file to back it up or move it to another browser.
@@ -85,8 +86,8 @@ A malformed vector is rejected instead of scored.
 You need Node.js 22 or later and pnpm.
 
 ```sh
-git clone https://github.com/0xExploitLabs/debrief.git
-cd debrief
+git clone https://github.com/0xExploitLabs/findingsmith.git
+cd findingsmith
 pnpm install
 pnpm dev
 ```

@@ -52,7 +52,7 @@ export function onColor(hex: string): string {
 }
 
 /**
- * The cover's lower edge breaks up into pixels, the way Debrief draws: for
+ * The cover's lower edge breaks up into pixels, the way the app draws: for
  * each row below the block, which columns are inked. The pattern is fixed, so
  * a report looks the same every time it is made.
  */

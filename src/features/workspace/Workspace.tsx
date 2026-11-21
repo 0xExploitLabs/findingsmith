@@ -1,5 +1,6 @@
 import { LoaderCircle, PanelLeft } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { APP_NAME } from "../../brand";
 import * as db from "../../data/db";
 import { type LibraryEntry, libraryBody } from "../../data/library";
 import { compareFindings } from "../../domain/severity";
@@ -100,7 +101,7 @@ export function Workspace({ route }: { route: Extract<Route, { projectId: string
   useEffect(() => setNavOpen(false), [here]);
 
   useEffect(() => {
-    document.title = project ? `${project.name || "Untitled project"} - Debrief` : "Debrief";
+    document.title = project ? `${project.name || "Untitled project"} - ${APP_NAME}` : APP_NAME;
   }, [project]);
 
   const open = (f: Finding) =>

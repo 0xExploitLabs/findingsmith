@@ -1,8 +1,10 @@
+import { APP_NAME } from "../brand";
 import { createProject, newId, normalizeFinding, normalizeProject } from "../domain/factories";
 import type { Asset, Finding, Project } from "../domain/types";
 import { blobToDataUrl, dataUrlToBlob } from "./assets";
 import { listAssets, listFindings, putProjectBundle } from "./db";
 
+// The marker predates the name Findingsmith; it stays, so older project files still open.
 const FORMAT = "debrief-project";
 const FORMAT_VERSION = 1;
 
@@ -48,10 +50,10 @@ export async function importProject(text: string): Promise<Project> {
   }
   const file = parsed as Partial<ProjectFile>;
   if (file.format !== FORMAT || !file.project || !Array.isArray(file.findings)) {
-    throw new Error("This is not a Debrief project file.");
+    throw new Error(`This is not a ${APP_NAME} project file.`);
   }
   if ((file.formatVersion ?? 0) > FORMAT_VERSION) {
-    throw new Error("This file was made by a newer version of Debrief.");
+    throw new Error(`This file was made by a newer version of ${APP_NAME}.`);
   }
 
   const assetIds = new Map<string, string>();

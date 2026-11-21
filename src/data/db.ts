@@ -7,19 +7,20 @@ import type { Asset, Finding, Project } from "../domain/types";
  * IndexedDB rather than localStorage because reports carry screenshots, and
  * localStorage is capped at a few megabytes of strings per origin.
  */
-interface DebriefDB extends DBSchema {
+interface AppDB extends DBSchema {
   projects: { key: string; value: Project };
   findings: { key: string; value: Finding; indexes: { projectId: string } };
   assets: { key: string; value: Asset; indexes: { projectId: string } };
 }
 
+// The tool was first called Debrief. Stored data keeps that name, so a rename loses nothing.
 const DB_NAME = "debrief";
 const DB_VERSION = 1;
 
-let dbPromise: Promise<IDBPDatabase<DebriefDB>> | null = null;
+let dbPromise: Promise<IDBPDatabase<AppDB>> | null = null;
 
-function db(): Promise<IDBPDatabase<DebriefDB>> {
-  dbPromise ??= openDB<DebriefDB>(DB_NAME, DB_VERSION, {
+function db(): Promise<IDBPDatabase<AppDB>> {
+  dbPromise ??= openDB<AppDB>(DB_NAME, DB_VERSION, {
     upgrade(database) {
       database.createObjectStore("projects", { keyPath: "id" });
       database

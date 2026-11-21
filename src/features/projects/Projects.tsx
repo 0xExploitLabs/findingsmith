@@ -9,6 +9,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { type CSSProperties, useEffect, useMemo, useState } from "react";
+import { APP_NAME } from "../../brand";
 import * as db from "../../data/db";
 import { download, exportProject, importProject, safeFilename } from "../../data/transfer";
 import { compareFindings, rate, SEVERITY_HEX } from "../../domain/severity";
@@ -32,7 +33,7 @@ export function Projects() {
   const [renaming, setRenaming] = useState<Project | null>(null);
 
   useEffect(() => {
-    document.title = "Projects - Debrief";
+    document.title = `Projects - ${APP_NAME}`;
   }, []);
 
   const shown = useMemo(() => {
@@ -122,7 +123,7 @@ export function Projects() {
                   onExport={async () =>
                     download(
                       await exportProject(row.project),
-                      `${safeFilename(row.project.name)}.debrief.json`,
+                      `${safeFilename(row.project.name)}.findingsmith.json`,
                     )
                   }
                 />
