@@ -10,9 +10,9 @@ import {
 } from "lucide-react";
 import { useRef } from "react";
 import { download, exportProject, safeFilename } from "../../data/transfer";
-import { rate } from "../../domain/severity";
-import { type Finding, type Project, SEVERITIES } from "../../domain/types";
-import { cx, IconButton, Menu, SEVERITY_CLASS } from "../../ui/primitives";
+import type { Finding, Project } from "../../domain/types";
+import { cx, IconButton, Menu } from "../../ui/primitives";
+import { countSeverities, SeverityMix } from "../../ui/SeverityMix";
 import { toast } from "../../ui/toast";
 import { AddSections, InlineText, Property, Title } from "../doc/DocParts";
 import { type DocController, DocEditor } from "../editor/DocEditor";
@@ -35,31 +35,17 @@ export function ProjectPage({
   onDelete: () => void;
 }) {
   const editor = useRef<DocController | null>(null);
-  const counts = Object.fromEntries(SEVERITIES.map((s) => [s, 0])) as Record<
-    (typeof SEVERITIES)[number],
-    number
-  >;
-  for (const f of findings) counts[rate(f).severity]++;
+  const counts = countSeverities(findings);
 
   return (
     <article className="mx-auto w-full max-w-[800px] px-6 pb-10 pt-10 sm:px-14">
-      <div className="mb-4 flex items-center gap-2 text-[12.5px] text-ink-faint">
-        <span className="rounded-md bg-surface-2 px-1.5 py-0.5 font-medium text-ink-muted">
-          Project
+      <div className="mb-4 flex min-h-8 items-center gap-3 text-[12.5px] text-ink-faint">
+        <span className="tabular-nums">
+          {findings.length === 0
+            ? "No findings yet"
+            : `${findings.length} finding${findings.length === 1 ? "" : "s"}`}
         </span>
-        <span className="ml-1">
-          {findings.length} finding{findings.length === 1 ? "" : "s"}
-        </span>
-        {findings.length > 0 ? (
-          <span className="ml-1 flex items-center gap-2.5">
-            {SEVERITIES.filter((s) => counts[s] > 0).map((s) => (
-              <span key={s} className="flex items-center gap-1" title={`${counts[s]} ${s}`}>
-                <span className={cx("size-1.5 rounded-[2px]", SEVERITY_CLASS[s].dot)} />
-                <span className="font-mono text-ink-muted">{counts[s]}</span>
-              </span>
-            ))}
-          </span>
-        ) : null}
+        <SeverityMix counts={counts} bar={false} />
         <div className="flex-1" />
         <Menu
           align="end"
