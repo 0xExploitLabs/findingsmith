@@ -9,8 +9,10 @@ There is no account and no server: projects are stored in your browser's Indexed
 - **Writing like a notes app.**
   Each finding and the report's own text are single Markdown documents with live preview, in the manner of Obsidian.
   Markup is hidden and rendered in place, and shows again on the line you are editing.
-  Type `/` on an empty line for headings, HTTP requests, request and response pairs, code blocks, tables, checklists and images.
-  Code fences close themselves as you type them, and code is highlighted by language.
+  Type `/` on an empty line for headings, code blocks in a language of your choice, request and response pairs, tables, checklists and images.
+  A table is a grid you fill in cell by cell; its Markdown stays out of sight.
+  Code fences close themselves as you type them, and every code block shows its language and lets you change it.
+  An empty section says what belongs in it until you write it.
 - **Properties when you need them.**
   Every finding has a severity, a status and a CVSS field.
   Endpoint and method, parameter, host, port, affected assets, CWE and CVE are added from the "Add property" picker, so a finding only shows what applies to it.
@@ -35,6 +37,7 @@ There is no account and no server: projects are stored in your browser's Indexed
 ## How the report is built from your documents
 
 The project document holds the text that comes before the findings.
+You edit it under "Report details", next to the PDF it feeds.
 Each `## Heading` in it becomes a numbered section.
 A section whose title contains "summary" opens the report together with the risk overview, and a section titled "Conclusion" closes it after the findings.
 

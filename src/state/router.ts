@@ -1,9 +1,15 @@
 import { useSyncExternalStore } from "react";
 
+/**
+ * A project's three places: its findings at a glance, what the report says
+ * about the engagement, and the PDF.
+ */
+export type ProjectView = "overview" | "details" | "report";
+
 export type Route =
   | { name: "home" }
   | { name: "projects" }
-  | { name: "project"; projectId: string; view: "overview" | "report" }
+  | { name: "project"; projectId: string; view: ProjectView }
   | { name: "finding"; projectId: string; findingId: string };
 
 export function parseHash(hash: string): Route {
@@ -14,7 +20,7 @@ export function parseHash(hash: string): Route {
     return {
       name: "project",
       projectId: parts[1],
-      view: parts[2] === "report" ? "report" : "overview",
+      view: parts[2] === "report" || parts[2] === "details" ? parts[2] : "overview",
     };
   }
   if (parts[0] === "projects") return { name: "projects" };
@@ -28,7 +34,7 @@ export function href(route: Route): string {
     case "projects":
       return "#/projects";
     case "project":
-      return `#/p/${route.projectId}${route.view === "report" ? "/report" : ""}`;
+      return `#/p/${route.projectId}${route.view === "overview" ? "" : `/${route.view}`}`;
     case "finding":
       return `#/p/${route.projectId}/f/${route.findingId}`;
   }

@@ -1,5 +1,6 @@
 import {
   Bug,
+  CircleCheck,
   CircleDot,
   Copy,
   Gauge,
@@ -17,7 +18,8 @@ import {
   Undo2,
   X,
 } from "lucide-react";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { findingGaps, listInWords } from "../../domain/completeness";
 import { formatScore, RATING_SCALE, readCvss } from "../../domain/cvss";
 import { rate } from "../../domain/severity";
 import { type Finding, SEVERITIES, type Severity, STATUSES } from "../../domain/types";
@@ -52,6 +54,17 @@ export const FINDING_SECTIONS = [
   "Remediation",
   "References",
 ];
+
+/** What to write under each section while it is still empty. */
+const FINDING_HINTS = {
+  description: "What is wrong and where, in a paragraph or two.",
+  impact: "What an attacker gains, and what that costs the business.",
+  "steps to reproduce":
+    "The first step. One per line, with requests, responses and screenshots as evidence.",
+  "request and response": "Type /request for a request and response pair.",
+  remediation: "How to fix it, the most effective measure first.",
+  references: "Links to the weakness, the standard or the vendor advisory.",
+};
 
 const METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"] as const;
 
@@ -110,6 +123,11 @@ export function FindingEditor({
   const rating = rate(finding);
   const cvssRead = finding.cvss.trim() ? readCvss(finding.cvss) : null;
   const cvssSeverity = rating.cvssSeverity;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only these four fields decide it
+  const gaps = useMemo(
+    () => findingGaps(finding),
+    [finding.title, finding.body, finding.cvss, finding.manualSeverity],
+  );
 
   const pickSeverity = (s: Severity) => {
     if (!cvssSeverity) onChange({ manualSeverity: s });
@@ -149,6 +167,17 @@ export function FindingEditor({
             )}
           >
             {reference}
+          </span>
+          <span
+            className={cx(
+              "flex min-w-0 items-center gap-1.5 text-[12.5px] [&_svg]:size-3.5 [&_svg]:shrink-0",
+              gaps.length > 0 ? "text-ink-faint" : "text-ok",
+            )}
+          >
+            {gaps.length > 0 ? null : <CircleCheck />}
+            <span className="truncate">
+              {gaps.length > 0 ? `Needs ${listInWords(gaps)}` : "Ready for the report"}
+            </span>
           </span>
           <div className="flex-1" />
           <IconButton
@@ -421,6 +450,7 @@ export function FindingEditor({
             value={finding.body}
             onChange={(body) => onChange({ body })}
             placeholder="Describe the finding. Each ## heading becomes a section of the report."
+            hints={FINDING_HINTS}
           />
           <AddSections
             body={finding.body}

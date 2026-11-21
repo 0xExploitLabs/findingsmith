@@ -8,6 +8,12 @@ import { Preview } from "../editor/Preview";
 
 type Category = (typeof LIBRARY_CATEGORIES)[number] | "All";
 
+/** Where the library opens: at one entry, in one category, or on everything. */
+export interface LibraryStart {
+  entryId?: string;
+  category?: (typeof LIBRARY_CATEGORIES)[number];
+}
+
 function matches(entry: LibraryEntry, q: string): boolean {
   if (!q) return true;
   const hay = [entry.title, entry.category, entry.cwe, entry.owasp, ...entry.tags]
@@ -21,10 +27,12 @@ function matches(entry: LibraryEntry, q: string): boolean {
 
 export function LibraryDialog({
   open,
+  start,
   onClose,
   onUse,
 }: {
   open: boolean;
+  start?: LibraryStart;
   onClose: () => void;
   onUse: (entry: LibraryEntry) => void;
 }) {
@@ -42,12 +50,20 @@ export function LibraryDialog({
   );
   const selected = results.find((e) => e.id === selectedId) ?? results[0] ?? null;
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: where it starts is read once, as it opens
   useEffect(() => {
     if (open) {
       setQuery("");
-      setCategory("All");
-      setSelectedId(null);
-      setReading(false);
+      setCategory(start?.category ?? "All");
+      setSelectedId(start?.entryId ?? null);
+      setReading(!!start?.entryId);
+      // An entry opened by name is scrolled to, so it is seen selected in the list.
+      const id = start?.entryId;
+      if (id) {
+        requestAnimationFrame(() =>
+          list.current?.querySelector(`[data-id="${id}"]`)?.scrollIntoView({ block: "center" }),
+        );
+      }
     }
   }, [open]);
 

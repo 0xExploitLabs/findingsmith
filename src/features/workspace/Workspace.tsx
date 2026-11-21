@@ -11,15 +11,17 @@ import { IconButton } from "../../ui/primitives";
 import { ThemeToggle } from "../../ui/ThemeToggle";
 import { toast } from "../../ui/toast";
 import { FindingEditor } from "../finding/FindingEditor";
-import { LibraryDialog } from "../library/LibraryDialog";
+import { LibraryDialog, type LibraryStart } from "../library/LibraryDialog";
 import { ReportView } from "../report/ReportView";
+import { ProjectHome } from "./ProjectHome";
 import { ProjectPage } from "./ProjectPage";
 import { QuickSwitcher, SWITCHER_ICONS } from "./QuickSwitcher";
 import { Sidebar } from "./Sidebar";
 
 export function Workspace({ route }: { route: Extract<Route, { projectId: string }> }) {
   const ws = useWorkspace(route.projectId);
-  const [libraryOpen, setLibraryOpen] = useState(false);
+  // The library, when open: on everything, in one category or at one entry.
+  const [library, setLibrary] = useState<LibraryStart | null>(null);
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
   const { confirm, dialog } = useConfirm();
@@ -58,7 +60,7 @@ export function Workspace({ route }: { route: Extract<Route, { projectId: string
 
   const addBlank = async () => open(await ws.addFinding());
   const addFromLibrary = async (entry: LibraryEntry) => {
-    setLibraryOpen(false);
+    setLibrary(null);
     const f = await ws.addFinding({
       title: entry.title,
       cvss: entry.vector,
@@ -82,7 +84,7 @@ export function Workspace({ route }: { route: Extract<Route, { projectId: string
       }
       if ((e.ctrlKey || e.metaKey) && e.altKey && e.key.toLowerCase() === "l") {
         e.preventDefault();
-        setLibraryOpen(true);
+        setLibrary({});
       }
     };
     window.addEventListener("keydown", onKey);
@@ -115,7 +117,7 @@ export function Workspace({ route }: { route: Extract<Route, { projectId: string
         refs={refs}
         route={route}
         onNewFinding={addBlank}
-        onOpenLibrary={() => setLibraryOpen(true)}
+        onOpenLibrary={() => setLibrary({})}
         onReorder={ws.reorder}
         onOpenSwitcher={() => setSwitcherOpen(true)}
         saveState={ws.saveState}
@@ -166,7 +168,7 @@ export function Workspace({ route }: { route: Extract<Route, { projectId: string
         ) : (
           <div
             className="min-h-0 flex-1 overflow-y-auto"
-            key={route.name === "finding" ? route.findingId : "overview"}
+            key={route.name === "finding" ? route.findingId : route.view}
           >
             <div className="min-h-full animate-rise">
               {finding ? (
@@ -199,11 +201,16 @@ export function Workspace({ route }: { route: Extract<Route, { projectId: string
                     })
                   }
                 />
+              ) : route.name === "project" && route.view === "details" ? (
+                <ProjectPage project={project} onChange={ws.updateProject} />
               ) : (
-                <ProjectPage
+                <ProjectHome
                   project={project}
                   findings={findings}
+                  refs={refs}
                   onChange={ws.updateProject}
+                  onNewFinding={addBlank}
+                  onOpenLibrary={(start) => setLibrary(start ?? {})}
                   onDelete={() =>
                     confirm({
                       title: "Delete this project?",
@@ -239,13 +246,19 @@ export function Workspace({ route }: { route: Extract<Route, { projectId: string
             id: "library",
             label: "Add a finding from the library",
             icon: SWITCHER_ICONS.library,
-            run: () => setLibraryOpen(true),
+            run: () => setLibrary({}),
           },
           {
-            id: "project",
-            label: "Project details and summary",
+            id: "overview",
+            label: "Project overview",
             icon: SWITCHER_ICONS.project,
             run: () => navigate({ name: "project", projectId: project.id, view: "overview" }),
+          },
+          {
+            id: "details",
+            label: "Report details: summary, scope and dates",
+            icon: SWITCHER_ICONS.details,
+            run: () => navigate({ name: "project", projectId: project.id, view: "details" }),
           },
           {
             id: "export",
@@ -262,8 +275,9 @@ export function Workspace({ route }: { route: Extract<Route, { projectId: string
         ]}
       />
       <LibraryDialog
-        open={libraryOpen}
-        onClose={() => setLibraryOpen(false)}
+        open={library !== null}
+        start={library ?? undefined}
+        onClose={() => setLibrary(null)}
         onUse={addFromLibrary}
       />
       {dialog}

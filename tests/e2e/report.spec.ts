@@ -16,6 +16,7 @@ async function newProject(page: Page) {
 
 /** The client is optional: it is added to the project when the report states one. */
 async function setClient(page: Page, client: string) {
+  await page.locator("#project-nav").getByRole("link", { name: "Report details" }).click();
   await page.getByRole("button", { name: "Add property" }).click();
   await page.getByRole("menuitem", { name: /Client/ }).click();
   await page.getByLabel("Client", { exact: true }).fill(client);
@@ -37,6 +38,23 @@ async function blankFinding(page: Page, title: string) {
   await page.getByRole("button", { name: "Add finding" }).click();
   await page.getByRole("menuitem", { name: /Blank finding/ }).click();
   await page.getByLabel("Title").fill(title);
+}
+
+/** The Markdown of every finding, as IndexedDB holds it. */
+function storedBodies(page: Page): Promise<string> {
+  return page.evaluate(
+    () =>
+      new Promise<string>((resolve, reject) => {
+        const open = indexedDB.open("debrief");
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const all = open.result.transaction("findings").objectStore("findings").getAll();
+          all.onerror = () => reject(all.error);
+          all.onsuccess = () =>
+            resolve(all.result.map((finding: { body: string }) => finding.body).join("\n"));
+        };
+      }),
+  );
 }
 
 /** Types a slash command and takes the one entry it narrows the menu down to. */
@@ -99,7 +117,7 @@ test("on a phone the project menu is a drawer, and the library still adds a find
   await expect(nav).toBeVisible();
 
   // One pane at a time: the list, then the template with its way in.
-  await page.getByRole("button", { name: "Browse the library" }).click();
+  await nav.getByRole("button", { name: "Browse the library" }).click();
   await page.getByLabel("Search the library").fill("IDOR");
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByRole("button", { name: "Add finding" })).toBeHidden();
@@ -113,6 +131,75 @@ test("on a phone the project menu is a drawer, and the library still adds a find
   // The document has the screen to itself: its title is not squeezed by a sidebar.
   const title = await page.getByLabel("Title", { exact: true }).boundingBox();
   expect(title?.width).toBeGreaterThan(300);
+});
+
+test("a new project opens on the library, and the report's own text has a place of its own", async ({
+  page,
+}) => {
+  await newProject(page);
+  const nav = page.locator("#project-nav");
+  const main = page.getByRole("main");
+  await expect(
+    main.getByRole("heading", { name: "Start from a finding that is already written" }),
+  ).toBeVisible();
+  // The sidebar lists findings; the report's text is no longer an entry above them.
+  await expect(nav).not.toContainText("Summary, scope and details");
+  await expect(nav.getByRole("navigation", { name: "Report" }).getByRole("link")).toHaveText([
+    "Report details",
+    "Export PDF",
+  ]);
+
+  // A category opens the library on that category, a starting point on that finding.
+  await main.getByRole("button", { name: /^Authentication/ }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("option")).toHaveCount(8);
+  await page.keyboard.press("Escape");
+  await main.getByRole("button", { name: /^SQL injection/ }).click();
+  await expect(dialog.getByRole("heading", { name: "SQL injection" })).toBeVisible();
+  await dialog.getByRole("button", { name: "Add finding" }).click();
+  await expect(page.getByLabel("Title", { exact: true })).toHaveValue("SQL injection");
+
+  // The overview now lists the finding, and leads on to the report's two sides.
+  await nav.getByRole("link", { name: "External web application test" }).click();
+  await expect(main.getByRole("link", { name: /SQL injection/ })).toContainText("Critical");
+  await expect(main).toContainText("Executive summary to write");
+  await main.getByRole("link", { name: "Report details" }).click();
+  await expect(page).toHaveURL(/\/details$/);
+  await expect(page.getByRole("heading", { name: "Report", exact: true })).toBeVisible();
+  await expect(page.getByLabel("Title", { exact: true })).toHaveValue(
+    "External web application test",
+  );
+  const editor = page.locator("article .cm-content");
+  await expect(editor).toContainText("Executive summary");
+  await editor.locator(".cm-line", { hasText: "What was tested, how it held up" }).click();
+  await page.keyboard.type("The application held up well.");
+  await expect(editor).not.toContainText("What was tested, how it held up");
+
+  await page.getByRole("link", { name: "PDF", exact: true }).click();
+  await expect(page).toHaveURL(/\/report$/);
+  await expect(page.getByText("Executive summary is written")).toBeVisible();
+});
+
+test("a blank finding says what each section is for, and what it still needs", async ({ page }) => {
+  await newProject(page);
+  await page.getByRole("button", { name: "Add finding" }).click();
+  await page.getByRole("menuitem", { name: /Blank finding/ }).click();
+  const article = page.locator("article");
+  await expect(article).toContainText("Needs a title, a write-up and a CVSS score");
+  const editor = article.locator(".cm-content");
+  await expect(editor).toContainText("What is wrong and where, in a paragraph or two.");
+  await expect(editor).toContainText("How to fix it, the most effective measure first.");
+
+  // A prompt is not text: it goes as soon as its section is written, and is never saved.
+  await page.getByLabel("Title").fill("Open redirect");
+  await editor.locator(".cm-line", { hasText: "What is wrong and where" }).click();
+  await page.keyboard.type("The next parameter is not validated.");
+  await expect(editor).not.toContainText("What is wrong and where");
+  await expect(article).toContainText("Needs remediation and a CVSS score");
+  await editor.locator(".cm-line", { hasText: "How to fix it" }).click();
+  await page.keyboard.type("Allow only relative paths.");
+  await page.getByLabel("CVSS vector or score").fill("6.1");
+  await expect(article).toContainText("Ready for the report");
 });
 
 test("severity follows the CVSS score: 5.3 is Medium", async ({ page }) => {
@@ -136,7 +223,7 @@ test("severity follows the CVSS score: 5.3 is Medium", async ({ page }) => {
 
 test("rating a scored finding differently needs a reason", async ({ page }) => {
   await newProject(page);
-  await page.getByRole("button", { name: "Browse the library" }).click();
+  await page.getByRole("main").getByRole("button", { name: "Browse the library" }).click();
   await page.getByLabel("Search the library").fill("IDOR");
   await page.getByRole("dialog").getByRole("button", { name: "Add finding" }).click();
   const severity = page.locator("dd").first();
@@ -285,8 +372,12 @@ test("/table is a table at once, filled in cell by cell with no Markdown in sigh
   await page.getByRole("button", { name: "Delete row" }).click();
   await expect(table.locator("tr")).toHaveCount(2);
 
-  // What was saved is an ordinary Markdown table: it comes back the same after a reload.
-  await expect(page.locator("#project-nav [role=status] .animate-spin")).toHaveCount(0);
+  // What is saved is an ordinary Markdown table, and it comes back the same after a reload.
+  await expect
+    .poll(() => storedBodies(page))
+    .toContain(
+      "| Target | Notes | Owner |\n| --- | --- | --- |\n| app.example.com | Production |  |\n\n",
+    );
   await page.reload();
   const saved = page.locator("article .cm-lp-table table");
   await expect(saved.locator("th")).toHaveText(["Target", "Notes", "Owner"]);
@@ -314,7 +405,7 @@ test("a code block names its language and lets you change it", async ({ page }) 
   await expect(editor.locator(".cm-lp-open")).toContainText("Bash");
 
   // A block typed by hand without a language is plain text until one is picked.
-  await editor.locator(".cm-line", { hasText: /^1\.\s*$/ }).click();
+  await editor.locator(".cm-line", { hasText: /^1\./ }).click();
   await page.keyboard.press("End");
   await page.keyboard.type(" Run it:");
   await page.keyboard.press("Enter");
@@ -364,13 +455,13 @@ test("a project can be renamed and duplicated from the projects page", async ({ 
 test("the PDF is a clean report: no Markdown, no watermark", async ({ page }) => {
   await newProject(page);
   await setClient(page, "Northwind Traders");
-  await page.getByRole("button", { name: "Browse the library" }).click();
+  await page.locator("#project-nav").getByRole("button", { name: "Browse the library" }).click();
   await page.getByLabel("Search the library").fill("IDOR");
   await page.getByRole("dialog").getByRole("button", { name: "Add finding" }).click();
 
   // Write Markdown in the live editor, as a tester would.
   const editor = page.locator("article .cm-content");
-  await editor.locator(".cm-line", { hasText: /^1\.\s*$/ }).click();
+  await editor.locator(".cm-line", { hasText: /^1\./ }).click();
   await page.keyboard.press("End");
   await page.keyboard.type("Sign in as **alice** and open `/api/invoices/1001`.");
   await page.keyboard.press("Enter");
@@ -385,7 +476,12 @@ test("the PDF is a clean report: no Markdown, no watermark", async ({ page }) =>
 
   await page.getByLabel("Endpoint URL").fill("https://app.example.com/api/invoices/{id}");
 
-  await page.getByRole("link", { name: "Export PDF" }).click();
+  // The summary is the report's own text: it is written under Report details.
+  await page.locator("#project-nav").getByRole("link", { name: "Report details" }).click();
+  await page.locator(".cm-line", { hasText: "What was tested, how it held up" }).click();
+  await page.keyboard.type("Three findings need attention before the next release.");
+
+  await page.getByRole("link", { name: "PDF", exact: true }).click();
   await page.getByLabel("Prepared by").fill("Kestrel Security");
   await expect(page.getByText("Ready", { exact: true })).toBeVisible();
   await expect(page.locator('iframe[title="Report preview"]')).toBeVisible({ timeout: 30_000 });
@@ -402,6 +498,7 @@ test("the PDF is a clean report: no Markdown, no watermark", async ({ page }) =>
   expect(text).toContain("GET /api/invoices/1002");
   expect(text).toContain("https://app.example.com/api/invoices/{id}");
   expect(text).toContain("Kestrel Security");
+  expect(text).toContain("Three findings need attention before the next release.");
   for (const markup of ["**", "```", "## ", "asset:", "](http"]) {
     expect(text, `raw Markdown "${markup}" in the PDF`).not.toContain(markup);
   }
