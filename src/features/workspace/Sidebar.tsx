@@ -19,6 +19,7 @@ import { compareFindings, rate } from "../../domain/severity";
 import type { Finding, Project } from "../../domain/types";
 import { href, type Route } from "../../state/router";
 import { SheetMark } from "../../ui/Plot";
+import { MOD_KEY } from "../../ui/platform";
 import { cx, IconButton, Kbd, Menu, SEVERITY_CLASS } from "../../ui/primitives";
 import { countSeverities, SeverityMix } from "../../ui/SeverityMix";
 import { ThemeToggle } from "../../ui/ThemeToggle";
@@ -111,7 +112,7 @@ export function Sidebar({
         >
           <Search className="size-3.5" />
           <span className="flex-1 text-left">Search</span>
-          <Kbd>Ctrl P</Kbd>
+          <Kbd>{MOD_KEY} K</Kbd>
         </button>
       </div>
 

@@ -72,7 +72,7 @@ export function Workspace({ route }: { route: Extract<Route, { projectId: string
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && navOpen && !e.defaultPrevented) setNavOpen(false);
-      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "p") {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setSwitcherOpen(true);
       }
