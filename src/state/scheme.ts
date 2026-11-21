@@ -5,13 +5,19 @@ const KEY = "debrief-scheme";
 const listeners = new Set<() => void>();
 
 /**
- * What the browser shows around the page in each theme: the tab icon, and the
- * bar colour on phones. index.html sets the same before the app loads.
+ * What the browser shows around the page in each theme: the tab icon, as SVG
+ * and as the PNG that Chromium browsers often pick for the tab, and the bar
+ * colour on phones. index.html sets the same before the app loads.
  */
-const BROWSER: Record<Scheme, { icon: string; bar: string }> = {
-  light: { icon: "/favicon.svg", bar: "#f8f8fa" },
-  dark: { icon: "/favicon-dark.svg", bar: "#0c0c10" },
+const BROWSER: Record<Scheme, { icon: string; png: string; bar: string }> = {
+  light: { icon: "/favicon.svg", png: "/favicon-32.png", bar: "#f8f8fa" },
+  dark: { icon: "/favicon-dark.svg", png: "/favicon-dark-32.png", bar: "#0c0c10" },
 };
+
+function setHref(id: string, href: string): void {
+  const link = document.getElementById(id);
+  if (link instanceof HTMLLinkElement) link.href = href;
+}
 
 export function getScheme(): Scheme {
   return document.documentElement.dataset.scheme === "light" ? "light" : "dark";
@@ -19,8 +25,8 @@ export function getScheme(): Scheme {
 
 export function setScheme(scheme: Scheme): void {
   document.documentElement.dataset.scheme = scheme;
-  const icon = document.getElementById("icon");
-  if (icon instanceof HTMLLinkElement) icon.href = BROWSER[scheme].icon;
+  setHref("icon", BROWSER[scheme].icon);
+  setHref("icon-png", BROWSER[scheme].png);
   document.getElementById("bar")?.setAttribute("content", BROWSER[scheme].bar);
   try {
     localStorage.setItem(KEY, scheme);
