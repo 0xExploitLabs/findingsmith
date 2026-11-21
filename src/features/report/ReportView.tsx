@@ -5,6 +5,7 @@ import { cvssOf } from "../../domain/severity";
 import type { Finding, Project } from "../../domain/types";
 import { findSection, splitSections } from "../../markdown/sections";
 import { href } from "../../state/router";
+import { SheetMark } from "../../ui/Plot";
 import { Button, cx } from "../../ui/primitives";
 import { toast } from "../../ui/toast";
 import { ReportSettings } from "./ReportSettings";
@@ -191,8 +192,8 @@ export function ReportView({
               className="h-full w-full border-0"
             />
           ) : (
-            <div className="flex h-full items-center justify-center gap-2.5 text-[13px] text-ink-muted">
-              <LoaderCircle className="size-4 animate-spin text-accent" />
+            <div className="flex h-full flex-col items-center justify-center gap-3 text-[13px] text-ink-muted">
+              <SheetMark loop className="size-20" />
               Typesetting your report
             </div>
           )}

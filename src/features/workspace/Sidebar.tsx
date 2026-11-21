@@ -17,6 +17,7 @@ import { formatScore } from "../../domain/cvss";
 import { compareFindings, rate } from "../../domain/severity";
 import type { Finding, Project } from "../../domain/types";
 import { href, type Route } from "../../state/router";
+import { SheetMark } from "../../ui/Plot";
 import { cx, IconButton, Kbd, Menu, SEVERITY_CLASS } from "../../ui/primitives";
 import { countSeverities, SeverityMix } from "../../ui/SeverityMix";
 import { ThemeToggle } from "../../ui/ThemeToggle";
@@ -193,6 +194,7 @@ export function Sidebar({
       <div className="mt-2 min-h-0 flex-1 overflow-y-auto px-2 pb-3">
         {findings.length === 0 ? (
           <div className="mx-2 mt-1 rounded-xl bg-surface-2 px-4 py-5">
+            <SheetMark className="-ml-2 mb-2" />
             <p className="text-[13px] text-ink">No findings yet.</p>
             <p className="mt-1 text-[12.5px] leading-snug text-ink-faint">
               Start from one of {LIBRARY.length} written findings, or from a blank page.

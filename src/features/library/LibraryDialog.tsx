@@ -2,6 +2,7 @@ import { Plus, Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LIBRARY, LIBRARY_CATEGORIES, type LibraryEntry } from "../../data/library";
 import { formatScore, scoreVector } from "../../domain/cvss";
+import { SheetMark } from "../../ui/Plot";
 import { Button, cx, Dialog, SEVERITY_CLASS, SeverityBadge } from "../../ui/primitives";
 import { Preview } from "../editor/Preview";
 
@@ -229,7 +230,8 @@ export function LibraryDialog({
               </div>
             </>
           ) : (
-            <div className="m-auto text-[13px] text-ink-faint">
+            <div className="m-auto flex flex-col items-center gap-3 text-[13px] text-ink-faint">
+              <SheetMark />
               Select a template to preview it.
             </div>
           )}
