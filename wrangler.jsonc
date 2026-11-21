@@ -1,0 +1,12 @@
+// Cloudflare serves the built site as static files: there is no server code.
+// Cloudflare's Git integration runs `pnpm build`, then `npx wrangler deploy`,
+// which reads this file and uploads `dist/`.
+{
+  "name": "findingsmith",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./dist",
+    // Every address is the one page; its routes live after the "#".
+    "not_found_handling": "single-page-application"
+  }
+}

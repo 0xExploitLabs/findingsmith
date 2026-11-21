@@ -96,6 +96,7 @@ Open the address Vite prints.
 
 To host it yourself, run `pnpm build` and serve the `dist/` folder from any static host.
 There is no backend to set up.
+The repository includes a `wrangler.jsonc` for Cloudflare, which serves `dist/` as static files.
 
 ## Contributing
 
