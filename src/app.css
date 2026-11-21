@@ -951,7 +951,6 @@
   display: inline-grid;
   grid-template-columns: auto 22px;
   grid-template-rows: auto 26px;
-  max-width: 100%;
 }
 .doc-editor .cm-lp-table table {
   border-collapse: separate;
@@ -1252,6 +1251,31 @@
 .group:focus-within > .pixel-corner > i {
   transform: scale(1);
   transition: transform var(--dur-medium) var(--ease-out) calc(var(--n) * 38ms);
+}
+/* A project card's pages: the cover, and behind it a page per finding. They
+   rest as a neat stack, fan out when the card is hovered, and follow the
+   pointer (--mx and --my, each -1 to 1), the deeper pages further. */
+.stack-page {
+  --fan: 0;
+  translate: calc(var(--k) * (9px + var(--fan) * 5px) + var(--mx, 0) * var(--k) * 5px)
+    calc(var(--k) * (-6px - var(--fan) * 2px) + var(--my, 0) * var(--k) * 3px);
+  rotate: calc(var(--k) * var(--fan) * 2deg);
+  transform-origin: 80% 100%;
+  transition:
+    translate var(--dur-medium) var(--ease-out),
+    rotate var(--dur-medium) var(--ease-out);
+}
+.stack-cover {
+  translate: calc(var(--mx, 0) * -3px) calc(var(--my, 0) * -2px);
+  transition: translate var(--dur-medium) var(--ease-out);
+}
+.group:hover .stack-page,
+.group:focus-within .stack-page {
+  --fan: 1;
+}
+.group:hover .stack-cover,
+.group:focus-within .stack-cover {
+  translate: calc(var(--mx, 0) * -3px) calc(var(--my, 0) * -2px - 6px);
 }
 .pixelated {
   image-rendering: pixelated;

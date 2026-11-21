@@ -461,6 +461,35 @@ test("Ctrl+K opens search, in the editor too, where the link shortcut moved asid
   await expect(editor).toContainText("[link text](https://)");
 });
 
+test("a project card stacks a page per finding behind its cover, and they follow the pointer", async ({
+  page,
+}) => {
+  await newProject(page);
+  for (const name of ["IDOR", "SQL injection"]) {
+    await page.getByRole("button", { name: "Add finding" }).click();
+    await page.getByRole("menuitem", { name: /From library/ }).click();
+    await page.getByLabel("Search the library").fill(name);
+    await page.getByRole("dialog").getByRole("button", { name: "Add finding" }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  }
+  await page.locator("#project-nav").getByRole("link", { name: "Projects" }).click();
+
+  const card = page.getByRole("listitem").filter({ hasText: "External web application test" });
+  await expect(card).toContainText("2 findings");
+  await expect(card.locator(".stack-page")).toHaveCount(2);
+  await expect(card.locator(".pixel-corner")).toHaveCount(1);
+
+  // Hovering fans the pages out, and the far one travels with the pointer.
+  const far = card.locator(".stack-page").first();
+  const left = async () => (await far.boundingBox())?.x ?? 0;
+  const rest = await left();
+  await card.hover({ position: { x: 340, y: 40 } });
+  await expect.poll(left).toBeGreaterThan(rest + 4);
+  const fanned = await left();
+  await card.hover({ position: { x: 20, y: 40 } });
+  await expect.poll(left).toBeLessThan(fanned - 4);
+});
+
 test("a project can be renamed and duplicated from the projects page", async ({ page }) => {
   await newProject(page);
   await page.goto("/#/projects");
