@@ -23,11 +23,14 @@ export function ReportSheet({
   title,
   score,
   sections,
+  size = "fit",
   className,
 }: {
   title: string;
   score: CvssScore | null;
   sections: Section[];
+  /** "fit" narrows the page on a small screen; "a4" always keeps the full page. */
+  size?: "fit" | "a4";
   className?: string;
 }) {
   const frame = useRef<HTMLDivElement>(null);
@@ -39,7 +42,7 @@ export function ReportSheet({
     const measure = () => {
       const width = el.clientWidth;
       if (!width) return;
-      const page = width < 480 ? NARROW : A4;
+      const page = size === "fit" && width < 480 ? NARROW : A4;
       setFit((old) => {
         const zoom = Math.round((width / page.width) * 1000) / 1000;
         return old.zoom === zoom && old.page === page ? old : { zoom, page };
@@ -49,7 +52,7 @@ export function ReportSheet({
     const resized = new ResizeObserver(measure);
     resized.observe(el);
     return () => resized.disconnect();
-  }, []);
+  }, [size]);
 
   const { page, zoom } = fit;
   const color = score ? SEVERITY_HEX[score.severity] : "";

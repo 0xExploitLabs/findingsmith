@@ -5,7 +5,6 @@ import { FlowIn, PixelCorner, SwapHeadline, useScrollProgress } from "../../ui/m
 import { PixelField } from "../../ui/PixelField";
 import { countSeverities, SeverityMix } from "../../ui/SeverityMix";
 import { relative, SiteShell, useProjectActions, useProjects } from "../projects/shared";
-import { LiveDemo } from "./LiveDemo";
 import { PixelPage } from "./PixelPage";
 
 const FACTS = [
@@ -42,7 +41,7 @@ export function Home() {
         <div className="absolute inset-0">
           <PixelField shape="frame" />
         </div>
-        <div className="relative mx-auto flex min-h-[min(100vh,820px)] max-w-[1240px] translate-y-[calc(var(--p,0)*-90px)] flex-col items-center justify-center px-6 pb-20 pt-36 text-center opacity-[calc(1-var(--p,0)*1.6)]">
+        <div className="relative mx-auto flex min-h-svh max-w-[1240px] translate-y-[calc(var(--p,0)*-90px)] flex-col items-center justify-center px-6 pb-20 pt-36 text-center opacity-[calc(1-var(--p,0)*1.6)]">
           <SwapHeadline
             first={["Write findings", "like notes"]}
             then={["Pentest reports,", "written like notes"]}
@@ -66,12 +65,8 @@ export function Home() {
       </section>
 
       <div className="mx-auto max-w-[1240px] px-6">
-        <FlowIn className="relative z-10 -mt-10">
-          <LiveDemo />
-        </FlowIn>
-
         {recent.length > 0 ? (
-          <section aria-labelledby="recent-title" className="pt-20">
+          <section aria-labelledby="recent-title" className="pt-24 sm:pt-36">
             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <h2
                 id="recent-title"
@@ -118,21 +113,34 @@ export function Home() {
           </section>
         ) : null}
 
-        <dl className="grid gap-3 pb-24 pt-20 md:grid-cols-3">
-          {FACTS.map(([term, text], i) => (
-            <FlowIn
-              key={term}
-              delay={i * 0.1}
-              className="group relative overflow-hidden rounded-2xl bg-surface-1 p-6 transition-[translate,box-shadow] duration-(--dur-medium) ease-(--ease-out) hover:-translate-y-1 hover:shadow-page"
+        <section aria-labelledby="facts-title" className="py-24 sm:py-40">
+          <FlowIn className="mx-auto max-w-[760px] text-center">
+            <h2
+              id="facts-title"
+              className="text-[34px] font-medium leading-[1.05] tracking-[-0.03em] sm:text-[60px]"
             >
-              <PixelCorner />
-              <dt className="font-display text-[30px] italic leading-tight tracking-[-0.02em]">
-                {term}
-              </dt>
-              <dd className="mt-3 text-[14.5px] leading-relaxed text-ink-muted">{text}</dd>
-            </FlowIn>
-          ))}
-        </dl>
+              Less formatting, more findings
+            </h2>
+            <p className="mx-auto mt-5 max-w-[50ch] text-[15px] leading-relaxed text-ink-muted sm:text-[16px]">
+              The report is laid out for you, so the hours go into the testing and the write-up.
+            </p>
+          </FlowIn>
+          <dl className="mt-12 grid gap-3 sm:mt-16 md:grid-cols-3">
+            {FACTS.map(([term, text], i) => (
+              <FlowIn
+                key={term}
+                delay={i * 0.1}
+                className="group relative overflow-hidden rounded-2xl bg-surface-1 p-7 transition-[translate,box-shadow] duration-(--dur-medium) ease-(--ease-out) hover:-translate-y-1 hover:shadow-page sm:p-8"
+              >
+                <PixelCorner />
+                <dt className="font-display text-[32px] italic leading-tight tracking-[-0.02em]">
+                  {term}
+                </dt>
+                <dd className="mt-3 text-[15px] leading-relaxed text-ink-muted">{text}</dd>
+              </FlowIn>
+            ))}
+          </dl>
+        </section>
       </div>
 
       <PixelPage />

@@ -1,152 +1,194 @@
 import { ArrowUpRight } from "lucide-react";
-import type { CSSProperties } from "react";
-import { SEVERITY_HEX } from "../../domain/severity";
-import { tint } from "../../pdf/palette";
+import { type CSSProperties, useMemo, useRef } from "react";
+import { readCvss } from "../../domain/cvss";
+import { splitSections } from "../../markdown/sections";
 import { href } from "../../state/router";
 import { useScrollProgress } from "../../ui/motion";
 import { PixelField } from "../../ui/PixelField";
+import { ART, FOCUS, FOCUS_SIZE, PAGE_ART } from "./pageArt";
+import { ReportSheet } from "./ReportSheet";
+import { SAMPLE_BODY, SAMPLE_TITLE, SAMPLE_VECTOR } from "./sample";
 
-/* A finding's page at 30 by 42 pixels, with the parts the PDF prints: running
-   head, reference and severity, title, score box, two sections, a code block
-   and the folio. Each entry is x, y, width, height and a fill. */
-const RED = SEVERITY_HEX.Critical;
-const INK = "fill-sheet-ink";
-const TEAL = "fill-sheet-accent";
-const ART: [number, number, number, number, string, number?][] = [
-  [3, 3, 24, 1, INK, 0.14],
-  [22, 3, 5, 1, TEAL],
-  [3, 6, 2, 1, TEAL],
-  [6, 6, 6, 1, tint(RED, 0.72)],
-  [6, 6, 1, 1, RED],
-  [3, 8, 16, 2, INK],
-  [3, 12, 24, 5, "fill-sheet-rule"],
-  [4, 13, 22, 3, "fill-sheet"],
-  [4, 13, 6, 3, tint(RED, 0.84)],
-  [5, 14, 3, 2, RED],
-  [11, 14, 12, 1, INK, 0.3],
-  [3, 19, 7, 1, TEAL],
-  [3, 21, 23, 1, INK, 0.3],
-  [3, 23, 17, 1, INK, 0.3],
-  [3, 26, 9, 1, TEAL],
-  [3, 28, 20, 1, INK, 0.3],
-  [3, 30, 24, 5, "fill-sheet-wash"],
-  [4, 31, 4, 1, "#8A5200", 0.75],
-  [9, 31, 8, 1, TEAL, 0.7],
-  [4, 33, 13, 1, INK, 0.3],
-  [3, 39, 9, 1, INK, 0.14],
-  [25, 39, 2, 1, INK, 0.3],
+/* The scroll through the pinned screen, 0 to 1: the drawn page rises and the
+   view flies into its score, holds, pulls back to the whole page, and then the
+   words arrive. */
+const FLY_END = 0.3;
+const PULL_START = 0.36;
+const PULL_END = 0.74;
+const SAID_START = 0.72;
+
+/** What the page holds, said beside it. */
+const POINTS: [string, string][] = [
+  [
+    "Severity you can defend",
+    "The rating follows the CVSS score, and an override prints its reason.",
+  ],
+  [
+    "Your Markdown, typeset",
+    "Headings, lists, tables and screenshots, set in the report's own type.",
+  ],
+  ["Evidence, highlighted", "Requests and code keep their indentation and their colours."],
 ];
 
-/* The view starts inside the red score, at 5 to 8 across and 14 to 16 down. */
-const ORIGIN = "origin-[21.67%_35.71%]";
-const START_ZOOM = 70;
-
-/** What the labels point at, each with the moment it appears, 0 to 1. */
-const CALLOUTS: [string, string, number][] = [
-  ["Rated Critical", "right-full mr-3 top-[12%] flex-row-reverse", 0],
-  ["CVSS 9.8", "left-full ml-3 top-[32%]", 0.14],
-  ["Your Markdown, typeset", "left-full ml-3 top-[54%]", 0.28],
-  ["Evidence, highlighted", "right-full mr-3 top-[74%] flex-row-reverse", 0.42],
-];
-
+const clamp = (x: number) => Math.min(1, Math.max(0, x));
 const easeInOut = (t: number) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2);
+const mix = (a: number, b: number, t: number) => a + (b - a) * t;
 const at = (moment: number) => ({ "--at": moment }) as CSSProperties;
+
 /**
- * The report seen from inside one of its pixels: scrolling pulls back out of
- * the red of a Critical score until the whole page hangs in the colour field,
- * and then the page is labelled, part by part.
+ * The report, met as a drawing in large pixels: it rises from the foot of the
+ * page, the view flies into its Critical score, then pulls back until the
+ * whole sheet hangs in the colour field, where it turns into the typeset page.
  */
 export function PixelPage() {
+  const sheet = useRef<HTMLDivElement>(null);
+  const screen = useRef<HTMLDivElement>(null);
+
   const ref = useScrollProgress<HTMLElement>((p, el) => {
-    // Zoom in equal ratios, so the pull-back feels as fast at the end as at the start.
-    const out = easeInOut(Math.min(1, p / 0.62));
-    const said = Math.min(1, Math.max(0, (p - 0.56) / 0.36));
-    el.style.setProperty("--zoom", (START_ZOOM ** (1 - out)).toFixed(4));
+    const page = sheet.current?.getBoundingClientRect();
+    const view = screen.current?.getBoundingClientRect();
+    if (!page || !view || !page.width) return;
+    // Where the page rests, and the focus point on it, inside the pinned screen.
+    const left = page.left - view.left;
+    const top = page.top - view.top;
+    const fx = FOCUS.x * page.width;
+    const fy = FOCUS.y * page.height;
+
+    // Rising: wider than the screen, its head just inside the top.
+    const rise = Math.max((view.width * 1.12) / page.width, 2.2);
+    const riseX = view.width / 2 - left - fx - rise * (page.width / 2 - fx);
+    const riseY = view.height * 0.1 - top - fy + rise * fy;
+    // Inside: the score's digits fill the middle of the screen.
+    const inside = Math.min(
+      (view.width * 0.5) / (FOCUS_SIZE.w * page.width),
+      (view.height * 0.4) / (FOCUS_SIZE.h * page.height),
+    );
+    const insideX = view.width / 2 - left - fx;
+    const insideY = view.height / 2 - top - fy;
+
+    let zoom = 1;
+    let x = 0;
+    let y = 0;
+    if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      if (p < PULL_START) {
+        const t = easeInOut(clamp(p / FLY_END));
+        // Zoom in equal ratios, so the flight is as fast at its end as at its start.
+        zoom = rise * (inside / rise) ** t;
+        x = mix(riseX, insideX, t);
+        y = mix(riseY, insideY, t);
+      } else {
+        const t = easeInOut(clamp((p - PULL_START) / (PULL_END - PULL_START)));
+        zoom = inside ** (1 - t);
+        x = insideX * (1 - t) ** 2;
+        y = insideY * (1 - t) ** 2;
+      }
+    }
+    const said = clamp((p - SAID_START) / (1 - SAID_START - 0.04));
+    el.style.setProperty("--zoom", zoom.toFixed(4));
+    el.style.setProperty("--x", `${x.toFixed(1)}px`);
+    el.style.setProperty("--y", `${y.toFixed(1)}px`);
+    el.style.setProperty("--field", clamp((p - 0.12) / 0.16).toFixed(3));
+    el.style.setProperty("--real", clamp((p - PULL_END + 0.02) / 0.06).toFixed(3));
     el.style.setProperty("--said", said.toFixed(3));
-    el.style.setProperty("--hint", Math.max(0, 1 - p * 9).toFixed(3));
-    el.toggleAttribute("data-said", said > 0.6);
+    el.toggleAttribute("data-said", said > 0.5);
   });
+
+  const score = useMemo(() => {
+    const read = readCvss(SAMPLE_VECTOR);
+    return read.ok ? read.cvss : null;
+  }, []);
+  const sections = useMemo(() => splitSections(SAMPLE_BODY), []);
+
   return (
     <>
-      <div className="h-56">
-        <PixelField shape="rise" />
-      </div>
-      <section
-        ref={ref}
-        aria-labelledby="read-title"
-        className="relative h-[300vh] bg-accent text-ink-inverse"
-      >
-        <div className="sticky top-0 flex h-screen flex-col overflow-hidden">
-          <div className="absolute inset-0 opacity-(--said)">
-            <PixelField shape="frame" tone="inverse" />
-          </div>
-          <div className="relative flex min-h-0 flex-1 items-center justify-center pt-16">
-            <div className="relative aspect-[30/42] h-[min(54vh,460px)]">
+      <section ref={ref} aria-labelledby="read-title" className="relative h-[340vh]">
+        <div ref={screen} className="sticky top-0 h-svh overflow-hidden">
+          <div className="absolute inset-0 bg-accent opacity-(--field,1)" />
+          <div className="relative mx-auto grid h-full max-w-[1240px] content-center items-center justify-items-center gap-x-20 gap-y-7 px-6 pb-8 pt-[76px] lg:grid-cols-[auto_minmax(0,430px)] lg:justify-center lg:justify-items-start">
+            <div
+              ref={sheet}
+              className="relative z-10 aspect-[595/842] h-[min(40svh,420px)] lg:h-[min(76svh,740px)]"
+            >
+              <ReportSheet
+                title={SAMPLE_TITLE}
+                score={score}
+                sections={sections}
+                size="a4"
+                className="absolute inset-0 opacity-(--real,1)"
+              />
               <svg
-                viewBox="0 0 30 42"
+                viewBox={`0 0 ${ART.width} ${ART.height}`}
                 shapeRendering="crispEdges"
-                role="img"
-                aria-label="A report page drawn in large pixels: a red Critical score, section headings, lines of text and a code block"
-                className={`size-full scale-(--zoom) shadow-page ${ORIGIN}`}
+                aria-hidden="true"
+                className="absolute inset-0 size-full translate-x-(--x,0px) translate-y-(--y,0px) scale-(--zoom,1) overflow-visible opacity-[calc(1-var(--real,1))]"
+                style={{ transformOrigin: `${FOCUS.x * 100}% ${FOCUS.y * 100}%` }}
               >
-                <rect width="30" height="42" className="fill-sheet" />
-                {ART.map(([x, y, w, h, fill, opacity]) => (
+                <rect
+                  x="1"
+                  y="1"
+                  width={ART.width}
+                  height={ART.height}
+                  fill="#000"
+                  opacity="0.16"
+                />
+                <rect width={ART.width} height={ART.height} className="fill-sheet" />
+                {PAGE_ART.map((b, i) => (
                   <rect
-                    key={`${x}-${y}-${w}`}
-                    x={x}
-                    y={y}
-                    width={w}
-                    height={h}
-                    opacity={opacity}
-                    {...(fill.startsWith("#") ? { fill } : { className: fill })}
+                    // biome-ignore lint/suspicious/noArrayIndexKey: a fixed drawing, never reordered
+                    key={i}
+                    x={b.x}
+                    y={b.y}
+                    width={b.w}
+                    height={b.h}
+                    fill={b.fill}
+                    opacity={b.o}
                   />
                 ))}
               </svg>
-              <ul className="pointer-events-none absolute inset-0 text-[13px] font-medium text-sheet-ink max-md:hidden">
-                {CALLOUTS.map(([label, place, moment]) => (
-                  <li
-                    key={label}
-                    style={at(moment)}
-                    className={`absolute flex items-center gap-1.5 whitespace-nowrap ${place} said`}
-                  >
-                    <span className="flex gap-[3px]">
-                      <i className="size-[5px] bg-sheet/40" />
-                      <i className="size-[5px] bg-sheet/70" />
-                      <i className="size-[5px] bg-sheet" />
-                    </span>
-                    <span className="rounded-md bg-sheet px-2 py-1 shadow-page">{label}</span>
-                  </li>
-                ))}
-              </ul>
             </div>
-            {/* The strip above runs on into the first screen, then clears as the view pulls back. */}
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-48 opacity-(--hint)">
-              <PixelField shape="fall" />
-            </div>
-            <p className="pointer-events-none absolute inset-x-0 bottom-10 text-center text-[13px] font-medium text-sheet opacity-(--hint)">
-              One pixel of your report. Keep scrolling.
-            </p>
-          </div>
-          <div className="relative mx-auto grid w-full max-w-[1240px] gap-x-12 gap-y-4 px-6 pb-14 pt-8 md:grid-cols-[1fr_minmax(0,420px)]">
-            <h2
-              id="read-title"
-              style={at(0.3)}
-              className="said font-display text-[52px] italic leading-none tracking-[-0.02em] sm:text-[72px]"
-            >
-              Built to be read
-            </h2>
-            <div style={at(0.45)} className="said">
-              <p className="text-[15px] leading-relaxed opacity-90">
+
+            <div className="relative text-ink-inverse max-lg:text-center">
+              <h2
+                id="read-title"
+                style={at(0)}
+                className="said font-display text-[46px] italic leading-none tracking-[-0.02em] sm:text-[64px] lg:text-[84px]"
+              >
+                Built to be read
+              </h2>
+              <p
+                style={at(0.12)}
+                className="said mt-4 text-[15px] leading-relaxed opacity-90 max-lg:mx-auto max-lg:max-w-[42ch] lg:mt-6 lg:text-[16px]"
+              >
                 Every pixel of the report is yours: a cover, contents with page numbers, a risk
                 overview and one section per finding. No watermark, and no tool name in the file.
               </p>
-              <a
-                href={href({ name: "projects" })}
-                className="group mt-5 inline-flex h-10 items-center gap-1.5 rounded-full bg-ink px-4.5 text-[13.5px] font-medium text-bg transition-transform duration-(--dur-short) ease-(--ease-out) hover:-translate-y-0.5 active:translate-y-0 [&_svg]:size-4 [&_svg]:transition-transform [&_svg]:duration-(--dur-short) [&_svg]:ease-(--ease-out) hover:[&_svg]:translate-x-0.5 hover:[&_svg]:-translate-y-0.5"
-              >
-                Open your projects
-                <ArrowUpRight />
-              </a>
+              <ul className="mt-8 space-y-5 max-lg:hidden">
+                {POINTS.map(([term, text], i) => (
+                  <li key={term} style={at(0.24 + i * 0.1)} className="said flex gap-3.5">
+                    <span aria-hidden="true" className="mt-[7px] grid shrink-0 grid-cols-2 gap-px">
+                      <i className="size-[5px] bg-current" />
+                      <i className="size-[5px] bg-current opacity-55" />
+                      <i className="size-[5px] bg-current opacity-55" />
+                      <i className="size-[5px] bg-current opacity-25" />
+                    </span>
+                    <span>
+                      <span className="block text-[15px] font-medium">{term}</span>
+                      <span className="mt-0.5 block text-[14px] leading-relaxed opacity-80">
+                        {text}
+                      </span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <div style={at(0.58)} className="said mt-6 lg:mt-9">
+                <a
+                  href={href({ name: "projects" })}
+                  className="inline-flex h-11 items-center gap-1.5 rounded-full bg-ink-inverse px-5 text-[14px] font-medium text-accent transition-transform duration-(--dur-short) ease-(--ease-out) hover:-translate-y-0.5 active:translate-y-0 [&_svg]:size-4 [&_svg]:transition-transform [&_svg]:duration-(--dur-short) [&_svg]:ease-(--ease-out) hover:[&_svg]:translate-x-0.5 hover:[&_svg]:-translate-y-0.5"
+                >
+                  Open your projects
+                  <ArrowUpRight />
+                </a>
+              </div>
             </div>
           </div>
         </div>
