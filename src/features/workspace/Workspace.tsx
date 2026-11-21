@@ -1,12 +1,14 @@
-import { LoaderCircle } from "lucide-react";
+import { LoaderCircle, PanelLeft } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import * as db from "../../data/db";
 import { type LibraryEntry, libraryBody } from "../../data/library";
 import { compareFindings } from "../../domain/severity";
 import type { Finding } from "../../domain/types";
-import { navigate, type Route } from "../../state/router";
+import { href, navigate, type Route } from "../../state/router";
 import { useWorkspace } from "../../state/useWorkspace";
 import { useConfirm } from "../../ui/Confirm";
+import { IconButton } from "../../ui/primitives";
+import { ThemeToggle } from "../../ui/ThemeToggle";
 import { toast } from "../../ui/toast";
 import { FindingEditor } from "../finding/FindingEditor";
 import { LibraryDialog } from "../library/LibraryDialog";
@@ -19,6 +21,7 @@ export function Workspace({ route }: { route: Extract<Route, { projectId: string
   const ws = useWorkspace(route.projectId);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [switcherOpen, setSwitcherOpen] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
   const { confirm, dialog } = useConfirm();
   const { project, findings } = ws;
 
@@ -40,6 +43,11 @@ export function Workspace({ route }: { route: Extract<Route, { projectId: string
       navigate({ name: "project", projectId: route.projectId, view: "overview" }, true);
     }
   }, [ws.status, route, finding]);
+
+  // Going anywhere puts the drawer away.
+  const here = href(route);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs when the address changes
+  useEffect(() => setNavOpen(false), [here]);
 
   useEffect(() => {
     document.title = project ? `${project.name || "Untitled project"} - Debrief` : "Debrief";
@@ -63,6 +71,7 @@ export function Workspace({ route }: { route: Extract<Route, { projectId: string
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && navOpen && !e.defaultPrevented) setNavOpen(false);
       if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "p") {
         e.preventDefault();
         setSwitcherOpen(true);
@@ -110,8 +119,43 @@ export function Workspace({ route }: { route: Extract<Route, { projectId: string
         onReorder={ws.reorder}
         onOpenSwitcher={() => setSwitcherOpen(true)}
         saveState={ws.saveState}
+        open={navOpen}
+        onClose={() => setNavOpen(false)}
       />
+      {navOpen ? (
+        <button
+          type="button"
+          aria-label="Close project menu"
+          tabIndex={-1}
+          onClick={() => setNavOpen(false)}
+          className="fixed inset-0 z-30 cursor-default animate-fade bg-scrim backdrop-blur-[3px] md:hidden"
+        />
+      ) : null}
       <main className="relative flex min-w-0 flex-1 flex-col">
+        <div className="flex h-12 shrink-0 items-center gap-1 border-b border-line bg-surface-1 pl-1.5 pr-2 md:hidden">
+          <IconButton
+            label="Open project menu"
+            aria-expanded={navOpen}
+            aria-controls="project-nav"
+            onClick={() => setNavOpen(true)}
+            className="size-9"
+          >
+            <PanelLeft />
+          </IconButton>
+          <p className="min-w-0 flex-1 truncate text-[13.5px] font-medium">
+            {finding ? (
+              <>
+                <span className="mr-2 font-mono text-[12px] font-normal text-ink-faint">
+                  {refs.get(finding.id)}
+                </span>
+                {finding.title || "Untitled finding"}
+              </>
+            ) : (
+              project.name || "Untitled project"
+            )}
+          </p>
+          <ThemeToggle />
+        </div>
         {route.name === "project" && route.view === "report" ? (
           <ReportView
             project={project}

@@ -43,13 +43,13 @@ export function Projects() {
 
   return (
     <SiteShell current="projects" projectCount={rows?.length ?? null} onNewProject={actions.create}>
-      <section className="mx-auto max-w-[1240px] animate-rise px-6 pb-24 pt-10">
+      <section className="mx-auto max-w-[1240px] animate-rise px-6 pb-24 pt-8 sm:pt-12">
         <div className="flex flex-wrap items-end gap-x-6 gap-y-4">
           <div className="min-w-[16rem] flex-1">
-            <h1 className="font-display text-[56px] italic leading-none tracking-[-0.02em]">
+            <h1 className="font-display text-[56px] italic leading-none tracking-[-0.02em] sm:text-[72px]">
               Projects
             </h1>
-            <p className="mt-1 text-[13.5px] text-ink-muted">
+            <p className="mt-3 text-[14.5px] text-ink-muted">
               One project per engagement. Open one to write, or go straight to its report.
             </p>
           </div>
@@ -90,7 +90,7 @@ export function Projects() {
                 <thead>
                   <tr className="border-b border-line text-[12.5px] text-ink-faint">
                     <th className="py-2.5 pl-3 pr-4 font-medium">Project</th>
-                    <th className="w-[32%] py-2.5 pr-4 font-medium">Findings</th>
+                    <th className="w-[32%] py-2.5 pr-4 font-medium max-sm:hidden">Findings</th>
                     <th className="hidden w-[14%] py-2.5 pr-4 font-medium md:table-cell">
                       Last edited
                     </th>
@@ -151,9 +151,18 @@ function Row({
         </a>
         <span className="mt-0.5 block truncate text-[13px] text-ink-faint">
           {project.client || "No client"}
+          <span className="md:hidden">, edited {relative(project.updatedAt)}</span>
         </span>
+        {/* Too narrow for a findings column: the counts sit under the name. */}
+        <div className="mt-2.5 sm:hidden">
+          {findings.length === 0 ? (
+            <span className="text-[13px] text-ink-faint">No findings yet</span>
+          ) : (
+            <SeverityMix counts={countSeverities(findings)} className="max-w-[260px]" />
+          )}
+        </div>
       </td>
-      <td className="py-4 pr-4 align-top">
+      <td className="py-4 pr-4 align-top max-sm:hidden">
         {findings.length === 0 ? (
           <span className="text-[13px] text-ink-faint">No findings yet</span>
         ) : (
