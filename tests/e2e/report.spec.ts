@@ -592,3 +592,34 @@ test("the PDF is a clean report: no Markdown, no watermark", async ({ page }) =>
   expect(info.Creator).toBe("Kestrel Security");
   expect(JSON.stringify(info)).not.toMatch(/react-pdf|debrief|findingsmith/i);
 });
+
+test.describe("on a computer set to dark mode", () => {
+  test.use({ colorScheme: "dark" });
+
+  test("the tab icon and browser bar follow the theme picked in the app", async ({ page }) => {
+    /** The colours the browser is given for the tab icon and the bar around the page. */
+    const chrome = () =>
+      page.evaluate(async () => {
+        const icon = document.querySelector<HTMLLinkElement>(
+          'link[rel="icon"][type="image/svg+xml"]',
+        );
+        const svg = icon ? await (await fetch(icon.href)).text() : "";
+        return {
+          blue: svg.includes("#007ad6"),
+          violet: svg.includes("#9886ff"),
+          bar: document.querySelector('meta[name="theme-color"]')?.getAttribute("content"),
+        };
+      });
+
+    await page.goto("/");
+    // The app opens light whatever the computer says, and so does its icon.
+    await expect.poll(chrome).toEqual({ blue: true, violet: false, bar: "#f8f8fa" });
+
+    await page.getByRole("button", { name: "Switch to dark theme" }).first().click();
+    await expect.poll(chrome).toEqual({ blue: false, violet: true, bar: "#0c0c10" });
+
+    // The choice is kept, and the icon is right before the app has loaded.
+    await page.reload();
+    await expect.poll(chrome).toEqual({ blue: false, violet: true, bar: "#0c0c10" });
+  });
+});
