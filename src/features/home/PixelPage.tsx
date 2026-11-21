@@ -103,7 +103,7 @@ export function PixelPage() {
     <>
       <section ref={ref} aria-labelledby="read-title" className="relative h-[340vh]">
         <div ref={screen} className="sticky top-0 h-svh overflow-hidden">
-          <div className="absolute inset-0 bg-accent opacity-(--field,1)" />
+          <div className="absolute inset-0 bg-field opacity-(--field,1)" />
           <div className="relative mx-auto grid h-full max-w-[1240px] content-center items-center justify-items-center gap-x-20 gap-y-7 px-6 pb-8 pt-[76px] lg:grid-cols-[auto_minmax(0,430px)] lg:justify-center lg:justify-items-start">
             <div
               ref={sheet}
@@ -147,7 +147,7 @@ export function PixelPage() {
               </svg>
             </div>
 
-            <div className="relative text-ink-inverse max-lg:text-center">
+            <div className="relative text-on-field max-lg:text-center">
               <h2
                 id="read-title"
                 style={at(0)}
@@ -183,7 +183,7 @@ export function PixelPage() {
               <div style={at(0.58)} className="said mt-6 lg:mt-9">
                 <a
                   href={href({ name: "projects" })}
-                  className="inline-flex h-11 items-center gap-1.5 rounded-full bg-ink-inverse px-5 text-[14px] font-medium text-accent transition-transform duration-(--dur-short) ease-(--ease-out) hover:-translate-y-0.5 active:translate-y-0 [&_svg]:size-4 [&_svg]:transition-transform [&_svg]:duration-(--dur-short) [&_svg]:ease-(--ease-out) hover:[&_svg]:translate-x-0.5 hover:[&_svg]:-translate-y-0.5"
+                  className="inline-flex h-11 items-center gap-1.5 rounded-full bg-on-field px-5 text-[14px] font-medium text-sheet transition-transform duration-(--dur-short) ease-(--ease-out) hover:-translate-y-0.5 active:translate-y-0 [&_svg]:size-4 [&_svg]:transition-transform [&_svg]:duration-(--dur-short) [&_svg]:ease-(--ease-out) hover:[&_svg]:translate-x-0.5 hover:[&_svg]:-translate-y-0.5"
                 >
                   Open your projects
                   <ArrowUpRight />

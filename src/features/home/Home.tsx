@@ -64,9 +64,14 @@ export function Home() {
         </div>
       </section>
 
+      {/* The field covers the hero to its foot, then thins out into the page. */}
+      <div className="h-40">
+        <PixelField shape="fall" />
+      </div>
+
       <div className="mx-auto max-w-[1240px] px-6">
         {recent.length > 0 ? (
-          <section aria-labelledby="recent-title" className="pt-24 sm:pt-36">
+          <section aria-labelledby="recent-title" className="pt-16 sm:pt-24">
             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <h2
                 id="recent-title"
@@ -113,7 +118,7 @@ export function Home() {
           </section>
         ) : null}
 
-        <section aria-labelledby="facts-title" className="py-24 sm:py-40">
+        <section aria-labelledby="facts-title" className="py-20 sm:py-32">
           <FlowIn className="mx-auto max-w-[760px] text-center">
             <h2
               id="facts-title"
