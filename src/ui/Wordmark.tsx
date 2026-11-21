@@ -20,16 +20,7 @@ export function Cicada({ className, hatch }: { className?: string; hatch?: boole
   );
 }
 
-export function Wordmark({
-  compact,
-  by = !compact,
-  className,
-}: {
-  compact?: boolean;
-  /** Adds "by 0xExploitLabs" after the name. */
-  by?: boolean;
-  className?: string;
-}) {
+export function Wordmark({ compact, className }: { compact?: boolean; className?: string }) {
   return (
     <span className={cx("inline-flex items-center gap-2", className)}>
       <Cicada className={cx("text-ink", compact ? "h-[11px]" : "h-[14px]")} />
@@ -41,16 +32,11 @@ export function Wordmark({
       >
         {APP_NAME}
       </span>
-      {by ? (
-        <span
-          className={cx(
-            "whitespace-nowrap text-ink-faint",
-            compact ? "text-[12px]" : "text-[12.5px]",
-          )}
-        >
+      {compact ? null : (
+        <span className="whitespace-nowrap text-[12.5px] text-ink-faint">
           by <span className="[font-feature-settings:'zero'] text-ink-muted">{ORG_NAME}</span>
         </span>
-      ) : null}
+      )}
     </span>
   );
 }
