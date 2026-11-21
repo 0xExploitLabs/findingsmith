@@ -4,9 +4,9 @@ import { assetUrl, storeImage } from "../../data/assets";
 import { CLASSIFICATIONS, type Project } from "../../domain/types";
 import { cx, IconButton, Menu, SelectButton, TextInput } from "../../ui/primitives";
 import { toast } from "../../ui/toast";
+import { ColourPicker } from "./ColourPicker";
 
 const ACCENTS = ["#036877", "#0B5FA5", "#5B3FA0", "#9B2C55", "#B3541E", "#2F6B3A", "#24292F"];
-const isHex = (v: string) => /^#[0-9a-fA-F]{6}$/.test(v);
 
 /** The few choices that change how the PDF looks, kept next to the preview. */
 export function ReportSettings({
@@ -74,19 +74,11 @@ export function ReportSettings({
               style={{ background: c }}
             />
           ))}
-          <label
-            className="relative flex size-6 items-center justify-center overflow-hidden rounded-full border border-dashed border-line-strong text-[11px] text-ink-faint hover:text-ink"
-            title="Custom colour"
-          >
-            +
-            <input
-              type="color"
-              aria-label="Custom colour"
-              value={isHex(project.accent) ? project.accent : "#036877"}
-              onChange={(e) => onChange({ accent: e.target.value })}
-              className="absolute inset-0 cursor-pointer opacity-0"
-            />
-          </label>
+          <ColourPicker
+            value={project.accent}
+            active={!ACCENTS.some((c) => c.toLowerCase() === project.accent.toLowerCase())}
+            onChange={(accent) => onChange({ accent })}
+          />
         </div>
       </Row>
       <Logo project={project} onChange={onChange} />
