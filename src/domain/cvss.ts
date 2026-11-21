@@ -66,19 +66,19 @@ export function parseVector(input: string): ParseResult {
   for (const part of parts) {
     const [key, value, extra] = part.split(":");
     if (!key || value === undefined || extra !== undefined) {
-      return { ok: false, error: `"${part}" is not a metric:value pair.` };
+      return { ok: false, error: `“${part}” is not a metric:value pair.` };
     }
     const def = defs.find((d) => d.key === key);
     if (!def) {
       return {
         ok: false,
-        error: `"${key}" is not a supported CVSS ${version} base metric.`,
+        error: `“${key}” is not a supported CVSS ${version} base metric.`,
       };
     }
-    if (key in metrics) return { ok: false, error: `"${key}" appears twice.` };
+    if (key in metrics) return { ok: false, error: `“${key}” appears twice.` };
     if (def.optional && value === "X") continue;
     if (value.length !== 1 || !def.values.includes(value)) {
-      return { ok: false, error: `"${value}" is not a valid value for ${key}.` };
+      return { ok: false, error: `“${value}” is not a valid value for ${key}.` };
     }
     metrics[key] = value;
   }
