@@ -1,4 +1,4 @@
-import { Plus, Search } from "lucide-react";
+import { ChevronLeft, Plus, Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LIBRARY, LIBRARY_CATEGORIES, type LibraryEntry } from "../../data/library";
 import { formatScore, scoreVector } from "../../domain/cvss";
@@ -31,6 +31,8 @@ export function LibraryDialog({
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<Category>("All");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // A narrow screen shows one pane at a time: the list, then the chosen template.
+  const [reading, setReading] = useState(false);
   const list = useRef<HTMLDivElement>(null);
 
   const results = useMemo(
@@ -45,6 +47,7 @@ export function LibraryDialog({
       setQuery("");
       setCategory("All");
       setSelectedId(null);
+      setReading(false);
     }
   }, [open]);
 
@@ -68,7 +71,7 @@ export function LibraryDialog({
 
   return (
     <Dialog open={open} onClose={onClose} width={1120} bare>
-      <div className="flex h-[min(760px,calc(100vh-4rem))] min-h-0">
+      <div className="flex h-[min(760px,calc(100dvh-2rem))] min-h-0 sm:h-[min(760px,calc(100dvh-4rem))]">
         <nav
           className="hidden w-[210px] shrink-0 flex-col overflow-y-auto border-r border-line bg-surface-2/50 p-2 md:flex"
           aria-label="Categories"
@@ -97,7 +100,12 @@ export function LibraryDialog({
           ))}
         </nav>
 
-        <div className="flex w-[340px] shrink-0 flex-col border-r border-line">
+        <div
+          className={cx(
+            "flex shrink-0 flex-col border-line max-md:w-full md:w-[340px] md:border-r",
+            reading && "max-md:hidden",
+          )}
+        >
           <div className="border-b border-line p-3">
             <div className="flex h-9 items-center gap-2 rounded-lg border border-line-strong bg-surface-2 px-3 focus-within:border-accent">
               <Search className="size-4 text-ink-faint" />
@@ -125,6 +133,27 @@ export function LibraryDialog({
                 className="h-full min-w-0 flex-1 bg-transparent text-[13.5px] outline-none"
               />
             </div>
+            <div className="-mx-3 mt-2.5 flex gap-1.5 overflow-x-auto px-3 [scrollbar-width:none] md:hidden">
+              {(["All", ...LIBRARY_CATEGORIES] as Category[]).map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  aria-pressed={category === c}
+                  onClick={() => {
+                    setCategory(c);
+                    setSelectedId(null);
+                  }}
+                  className={cx(
+                    "h-7 shrink-0 rounded-full border px-2.5 text-[12.5px] transition-colors duration-(--dur-micro)",
+                    category === c
+                      ? "border-line-hover bg-surface-3 text-ink"
+                      : "border-line-strong text-ink-muted",
+                  )}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
           </div>
           <div
             ref={list}
@@ -146,7 +175,10 @@ export function LibraryDialog({
                     type="button"
                     role="option"
                     aria-selected={selected?.id === e.id}
-                    onClick={() => setSelectedId(e.id)}
+                    onClick={() => {
+                      setSelectedId(e.id);
+                      setReading(true);
+                    }}
                     onDoubleClick={() => onUse(e)}
                     className={cx(
                       "flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors",
@@ -175,10 +207,18 @@ export function LibraryDialog({
           </div>
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className={cx("min-w-0 flex-1 flex-col", reading ? "flex" : "hidden md:flex")}>
           {selected && score ? (
             <>
-              <div className="border-b border-line px-6 pb-4 pt-5">
+              <div className="border-b border-line px-5 pb-4 pt-4 sm:px-6 sm:pt-5">
+                <button
+                  type="button"
+                  onClick={() => setReading(false)}
+                  className="-ml-2 mb-2 flex h-8 items-center gap-1 rounded-lg pl-1 pr-2.5 text-[13px] text-ink-muted transition-colors hover:bg-hover hover:text-ink md:hidden"
+                >
+                  <ChevronLeft className="size-4" />
+                  All templates
+                </button>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-ink-faint">
                   <span>{selected.category}</span>
                   <span className="font-mono text-[12px]">{selected.cwe}</span>
@@ -212,13 +252,15 @@ export function LibraryDialog({
                   ] as const
                 ).map(([label, md]) => (
                   <div key={label} className="border-b border-line last:border-b-0">
-                    <h3 className="px-6 pt-4 text-[14px] font-semibold text-ink">{label}</h3>
-                    <Preview source={md} className="px-6 pb-4 pt-2" />
+                    <h3 className="px-5 pt-4 text-[14px] font-semibold text-ink sm:px-6">
+                      {label}
+                    </h3>
+                    <Preview source={md} className="px-5 pb-4 pt-2 sm:px-6" />
                   </div>
                 ))}
               </div>
-              <div className="flex items-center gap-2 border-t border-line bg-surface-2/60 px-6 py-3.5">
-                <p className="mr-auto text-[12px] text-ink-faint">
+              <div className="flex items-center justify-end gap-2 border-t border-line bg-surface-2/60 px-5 py-3.5 sm:px-6">
+                <p className="mr-auto text-[12px] text-ink-faint max-sm:hidden">
                   Edit the text to fit what you found. The vector sets the severity.
                 </p>
                 <Button variant="ghost" onClick={onClose}>

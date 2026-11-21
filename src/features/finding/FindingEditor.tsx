@@ -269,6 +269,8 @@ export function FindingEditor({
                 mono
                 label="CVSS vector or score"
                 fit
+                multiline
+                className="break-all"
                 invalid={cvssRead?.ok === false}
               />
               {cvssRead?.ok ? (

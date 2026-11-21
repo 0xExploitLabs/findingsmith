@@ -10,6 +10,7 @@ import {
   LoaderCircle,
   Plus,
   Search,
+  X,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { LIBRARY } from "../../data/library";
@@ -35,6 +36,8 @@ export function Sidebar({
   onReorder,
   onOpenSwitcher,
   saveState,
+  open,
+  onClose,
 }: {
   project: Project;
   findings: Finding[];
@@ -45,6 +48,9 @@ export function Sidebar({
   onReorder: (ids: string[]) => void;
   onOpenSwitcher: () => void;
   saveState: "saved" | "saving" | "error";
+  /** On a narrow screen the sidebar is a drawer; this is whether it is out. */
+  open: boolean;
+  onClose: () => void;
 }) {
   const [sort, setSort] = useState<SortMode>("severity");
   const [dragId, setDragId] = useState<string | null>(null);
@@ -75,8 +81,14 @@ export function Sidebar({
   };
 
   return (
-    <aside className="flex h-full w-[296px] shrink-0 flex-col border-r border-line bg-surface-1">
-      <div className="flex h-14 items-center gap-1 border-b border-line px-3">
+    <aside
+      id="project-nav"
+      className={cx(
+        "flex h-full w-[296px] shrink-0 flex-col border-r border-line bg-surface-1 max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-40 max-md:w-[min(320px,calc(100vw-3rem))] max-md:shadow-pop max-md:transition-[translate,visibility] max-md:duration-(--dur-medium) max-md:ease-(--ease-glide)",
+        !open && "max-md:invisible max-md:-translate-x-full",
+      )}
+    >
+      <div className="flex h-14 shrink-0 items-center gap-1 border-b border-line px-3">
         <a
           href={href({ name: "projects" })}
           className="flex h-8 items-center gap-1 rounded-lg pl-1 pr-2 text-[13px] text-ink-muted transition-colors hover:bg-hover hover:text-ink"
@@ -85,7 +97,10 @@ export function Sidebar({
           Projects
         </a>
         <div className="flex-1" />
-        <Wordmark compact />
+        <Wordmark compact className="max-md:hidden" />
+        <IconButton label="Close project menu" onClick={onClose} className="md:hidden">
+          <X />
+        </IconButton>
       </div>
 
       <div className="px-3 pt-3">

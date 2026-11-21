@@ -136,13 +136,16 @@ export function ReportView({
   const issues = list.filter((c) => !c.ok).length;
 
   return (
-    <div className="flex h-full min-h-0">
-      <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex h-14 shrink-0 items-center gap-3 border-b border-line px-5">
+    // Wide, the settings sit beside the preview; narrower, they follow it and the page scrolls.
+    <div className="flex min-h-0 flex-1 flex-col max-lg:overflow-y-auto lg:flex-row">
+      <div className="flex min-w-0 flex-col max-lg:h-[min(76dvh,860px)] max-lg:shrink-0 lg:flex-1">
+        <div className="flex h-14 shrink-0 items-center gap-3 border-b border-line px-4 sm:px-5">
           <div className="min-w-0">
             <h1 className="text-[15px] font-semibold tracking-[-0.01em]">Report</h1>
           </div>
-          <span className="truncate font-mono text-[12px] text-ink-faint">{filename}</span>
+          <span className="truncate font-mono text-[12px] text-ink-faint max-sm:hidden">
+            {filename}
+          </span>
           <div className="flex-1" />
           <Button
             size="sm"
@@ -188,7 +191,7 @@ export function ReportView({
           ) : url ? (
             <iframe
               title="Report preview"
-              src={`${url}#navpanes=0&view=FitH`}
+              src={`${url}#toolbar=0&navpanes=0&view=FitH`}
               className="h-full w-full border-0"
             />
           ) : (
@@ -205,7 +208,7 @@ export function ReportView({
         </div>
       </div>
 
-      <aside className="hidden w-[320px] shrink-0 flex-col overflow-y-auto border-l border-line bg-surface-1 lg:flex">
+      <aside className="flex shrink-0 flex-col border-line bg-surface-1 max-lg:border-t lg:w-[320px] lg:overflow-y-auto lg:border-l">
         <div className="flex h-14 shrink-0 items-center border-b border-line px-5">
           <h2 className="text-[13.5px] font-semibold">Design</h2>
         </div>

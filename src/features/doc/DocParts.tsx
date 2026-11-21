@@ -57,7 +57,7 @@ export function Property({
 }) {
   return (
     <div className="group/prop flex min-h-[34px] items-start gap-3 py-[3px]">
-      <dt className="flex h-7 w-[128px] shrink-0 items-center gap-2 text-[13px] text-ink-faint [&_svg]:size-[15px]">
+      <dt className="flex h-7 w-[108px] shrink-0 sm:w-[128px] items-center gap-2 text-[13px] text-ink-faint [&_svg]:size-[15px]">
         {icon}
         {label}
       </dt>
