@@ -437,7 +437,8 @@ const Head = memo(
                     invalid={cvssRead?.ok === false}
                     autoFocus={justAdded === "cvss"}
                   />
-                  {cvssRead?.ok ? (
+                  {/* A vector shows the score it works out to; a bare score is already shown. */}
+                  {cvssRead?.ok && cvssRead.cvss.vector ? (
                     <span
                       className={cx(
                         "shrink-0 font-mono text-[13px] font-semibold",
@@ -447,7 +448,7 @@ const Head = memo(
                     >
                       {formatScore(cvssRead.cvss.score)}
                     </span>
-                  ) : cvssRead ? (
+                  ) : cvssRead && !cvssRead.ok ? (
                     <span className="shrink-0 text-[12px] text-danger" title={cvssRead.error}>
                       Not a valid vector or score
                     </span>
