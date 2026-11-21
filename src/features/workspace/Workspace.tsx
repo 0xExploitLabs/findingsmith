@@ -167,7 +167,7 @@ export function Workspace({ route }: { route: Extract<Route, { projectId: string
                       action: "Delete project",
                       onConfirm: async () => {
                         await db.deleteProject(project.id);
-                        navigate({ name: "home" }, true);
+                        navigate({ name: "projects" }, true);
                         toast("Project deleted");
                       },
                     })
@@ -213,7 +213,7 @@ export function Workspace({ route }: { route: Extract<Route, { projectId: string
             id: "projects",
             label: "All projects",
             icon: SWITCHER_ICONS.projects,
-            run: () => navigate({ name: "home" }),
+            run: () => navigate({ name: "projects" }),
           },
         ]}
       />
