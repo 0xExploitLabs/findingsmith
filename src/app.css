@@ -122,6 +122,13 @@
   #root {
     height: 100%;
   }
+  /* Code, payloads and URLs are shown exactly as typed: no "//" or "!=" drawn as one glyph. */
+  code,
+  kbd,
+  pre,
+  .font-mono {
+    font-variant-ligatures: none;
+  }
   body {
     background: var(--color-bg);
     color: var(--color-ink);
@@ -251,6 +258,7 @@
 }
 .prose-md code {
   font-family: var(--font-mono);
+  font-variant-ligatures: none;
   font-size: 0.86em;
   background: var(--color-code);
   border: 1px solid var(--color-line);
@@ -409,6 +417,7 @@
 }
 .doc-editor .cm-lp-code {
   font-family: var(--font-mono);
+  font-variant-ligatures: none;
   font-size: 0.84em;
   background: var(--color-code);
   border: 1px solid var(--color-line);
@@ -452,6 +461,7 @@
 }
 .doc-editor .cm-lp-codeline {
   font-family: var(--font-mono);
+  font-variant-ligatures: none;
   font-size: 13px;
   line-height: 1.65;
   background: var(--color-code);
