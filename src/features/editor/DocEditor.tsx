@@ -188,6 +188,19 @@ const link: Command = (view) => {
 };
 
 /**
+ * The editor draws its own selection beneath the text, in the app's colour.
+ * Out of focus it stays as a quiet grey, as a native selection does.
+ */
+const selectionColours = EditorView.theme({
+  ".cm-selectionLayer .cm-selectionBackground": {
+    background: "rgb(var(--brand-ink) / 0.1)",
+  },
+  "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground": {
+    background: "var(--color-selection)",
+  },
+});
+
+/**
  * Text copied from a web page or a chat answer keeps its formatting: the
  * clipboard's HTML is pasted as Markdown. In code, and when the HTML carries
  * no formatting, the plain text is pasted as usual.
@@ -498,6 +511,7 @@ export function DocEditor({
         extensions: [
           history(),
           drawSelection(),
+          selectionColours,
           EditorView.lineWrapping,
           markdown({ base: markdownLanguage, codeLanguages: languages, addKeymap: false }),
           syntaxHighlighting(codeColours),

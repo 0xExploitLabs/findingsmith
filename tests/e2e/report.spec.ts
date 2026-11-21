@@ -721,3 +721,40 @@ test("text copied from a web page keeps its code, bold, links and lists", async 
   await paste(page, "<p>Use <code>curl</code> <b>now</b></p>", "Use curl now");
   await expect.poll(() => storedBodies(page)).toContain("Use curl now");
 });
+
+test("selected text is drawn in the theme's own colour, code included", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("debrief-scheme", "dark"));
+  await newProject(page);
+  await blankFinding(page, "Selection");
+  const editor = page.locator("article .cm-content");
+  await editor.locator(".cm-line", { hasText: "What is wrong and where" }).click();
+  await page.keyboard.type("Send `X-Forwarded-Host` to it.");
+  await page.keyboard.press("Enter");
+  await slash(page, "code");
+  await page.keyboard.type("GET / HTTP/1.1");
+  await page.keyboard.press("Shift+ArrowUp");
+  await page.keyboard.press("Shift+ArrowUp");
+  await page.keyboard.press("Shift+ArrowUp");
+
+  const colours = await page.evaluate(() => {
+    const probe = document.createElement("div");
+    probe.style.background = "var(--color-selection)";
+    document.body.append(probe);
+    const theme = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    const drawn = document.querySelector(".cm-selectionBackground");
+    const code = document.querySelector(".cm-lp-codeline");
+    return {
+      theme,
+      drawn: drawn ? getComputedStyle(drawn).backgroundColor : null,
+      // Code must let the selection beneath it show through.
+      codeAlpha: code
+        ? Number(getComputedStyle(code).backgroundColor.match(/[\d.]+(?=\))/)?.[0])
+        : 1,
+    };
+  });
+  // CodeMirror's own default is a pale lavender that light text cannot be read on.
+  expect(colours.drawn).toBe(colours.theme);
+  expect(colours.drawn).not.toBe("rgb(215, 212, 240)");
+  expect(colours.codeAlpha).toBeLessThan(1);
+});

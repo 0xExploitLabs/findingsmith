@@ -48,6 +48,8 @@
   --brand-surface-2: 24 24 31;
   --brand-surface-3: 36 36 46;
   --brand-code: 8 8 11;
+  /* The code colour as a wash over the page, so a selection drawn beneath shows through. */
+  --brand-code-wash: 0 0 0 / 0.32;
   --brand-ink: 240 240 246;
   --brand-ink-muted: 166 166 180;
   --brand-ink-inverse: 10 10 14;
@@ -76,6 +78,7 @@
   --brand-surface-2: 240 243 247;
   --brand-surface-3: 226 231 238;
   --brand-code: 239 242 247;
+  --brand-code-wash: 98 148 200 / 0.06;
   --brand-ink: 10 10 14;
   --brand-ink-muted: 88 88 102;
   --brand-ink-inverse: 255 255 255;
@@ -105,6 +108,8 @@
   --color-surface-2: rgb(var(--brand-surface-2));
   --color-surface-3: rgb(var(--brand-surface-3));
   --color-code: rgb(var(--brand-code));
+  --color-code-wash: rgb(var(--brand-code-wash));
+  --color-selection: rgb(var(--brand-accent) / 0.28);
   --color-ink: rgb(var(--brand-ink));
   --color-ink-muted: rgb(var(--brand-ink-muted));
   --color-ink-faint: rgb(var(--brand-ink-muted) / 0.62);
@@ -325,7 +330,7 @@
     font-variant-numeric: tabular-nums;
   }
   ::selection {
-    background: rgb(var(--brand-accent) / 0.28);
+    background: var(--color-selection);
   }
   button,
   [role="button"],
@@ -735,7 +740,7 @@
   font-family: var(--font-mono);
   font-variant-ligatures: none;
   font-size: 0.84em;
-  background: var(--color-code);
+  background: var(--color-code-wash);
   border: 1px solid var(--color-line);
   border-radius: 5px;
   padding: 0.05em 0.3em;
@@ -780,7 +785,7 @@
   font-variant-ligatures: none;
   font-size: 13px;
   line-height: 1.65;
-  background: var(--color-code);
+  background: var(--color-code-wash);
   padding: 0 16px;
   border-left: 1px solid var(--color-line);
   border-right: 1px solid var(--color-line);
