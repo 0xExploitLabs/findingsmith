@@ -15,6 +15,8 @@ There is no account and no server: projects are stored in your browser's Indexed
   Every finding has a severity, a status and a CVSS field.
   Endpoint and method, parameter, host, port, affected assets, CWE and CVE are added from the "Add property" picker, so a finding only shows what applies to it.
   Usual sections such as Impact or Remediation are one click away under the write-up.
+- **All your projects in one place.**
+  The Projects page lists every engagement with its severity mix and a direct link to its report.
 - **Find anything.**
   Press Ctrl+P (Cmd+P on macOS) to jump to a finding or run a command.
 - **Severity you can defend.**

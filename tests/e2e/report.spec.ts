@@ -29,6 +29,25 @@ async function blankFinding(page: Page, title: string) {
   await page.getByLabel("Title").fill(title);
 }
 
+test("the projects page lists every project and opens its report", async ({ page }) => {
+  await newProject(page);
+  await page.getByRole("link", { name: "Projects" }).click();
+  await expect(page.getByRole("heading", { name: "Projects" })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "External web application test", exact: true }),
+  ).toBeVisible();
+
+  await page.getByRole("link", { name: "Report for External web application test" }).click();
+  await expect(page.getByRole("heading", { name: "Report" })).toBeVisible();
+  await expect(page.locator('iframe[title="Report preview"]')).toBeVisible({ timeout: 30_000 });
+
+  // The overview offers the same project again, and the way back to all of them.
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Pick up where you left off" })).toBeVisible();
+  await page.getByRole("link", { name: "Your project" }).click();
+  await expect(page).toHaveURL(/#\/projects$/);
+});
+
 test("severity follows the CVSS score: 5.3 is Medium", async ({ page }) => {
   await newProject(page);
   await blankFinding(page, "Verbose error messages");
