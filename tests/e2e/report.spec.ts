@@ -630,30 +630,48 @@ test.describe("on a computer set to dark mode", () => {
   test.use({ colorScheme: "dark" });
 
   test("the tab icon and browser bar follow the theme picked in the app", async ({ page }) => {
-    /** The colours the browser is given for the tab icon and the bar around the page. */
+    /**
+     * The tile colour each tab icon draws, SVG and PNG alike, since a browser
+     * may pick either; and the colour of the bar around the page.
+     */
     const chrome = () =>
       page.evaluate(async () => {
-        const icon = document.querySelector<HTMLLinkElement>(
-          'link[rel="icon"][type="image/svg+xml"]',
+        const tiles = await Promise.all(
+          [...document.querySelectorAll<HTMLLinkElement>('link[rel="icon"]')].map(async (link) => {
+            const image = new Image();
+            image.src = link.href;
+            await image.decode();
+            const canvas = document.createElement("canvas");
+            canvas.width = canvas.height = 32;
+            const context = canvas.getContext("2d");
+            context?.drawImage(image, 0, 0, 32, 32);
+            // The left edge, halfway down: tile, clear of the page and the rounded corners.
+            const [r, g, b] = context?.getImageData(2, 16, 1, 1).data ?? [];
+            return `rgb(${r}, ${g}, ${b})`;
+          }),
         );
-        const svg = icon ? await (await fetch(icon.href)).text() : "";
         return {
-          blue: svg.includes("#007ad6"),
-          violet: svg.includes("#9886ff"),
+          tiles,
           bar: document.querySelector('meta[name="theme-color"]')?.getAttribute("content"),
         };
       });
+    // The hero's colour field in each theme.
+    const sky = "rgb(41, 163, 255)";
+    const violet = "rgb(152, 134, 255)";
 
     await page.goto("/");
     // The app opens light whatever the computer says, and so does its icon.
-    await expect.poll(chrome).toEqual({ blue: true, violet: false, bar: "#f8f8fa" });
+    await expect.poll(chrome).toEqual({ tiles: [sky, sky], bar: "#f8f8fa" });
 
     await page.getByRole("button", { name: "Switch to dark theme" }).first().click();
-    await expect.poll(chrome).toEqual({ blue: false, violet: true, bar: "#0c0c10" });
+    await expect.poll(chrome).toEqual({ tiles: [violet, violet], bar: "#0c0c10" });
 
     // The choice is kept, and the icon is right before the app has loaded.
     await page.reload();
-    await expect.poll(chrome).toEqual({ blue: false, violet: true, bar: "#0c0c10" });
+    await expect.poll(chrome).toEqual({ tiles: [violet, violet], bar: "#0c0c10" });
+
+    await page.getByRole("button", { name: "Switch to light theme" }).first().click();
+    await expect.poll(chrome).toEqual({ tiles: [sky, sky], bar: "#f8f8fa" });
   });
 });
 

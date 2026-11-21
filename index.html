@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link id="icon" rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link id="icon-png" rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>Findingsmith - pentest report writer, by 0xExploitLabs</title>
     <link rel="canonical" href="https://findingsmith.0xexploitlabs.org/" />
@@ -24,6 +24,7 @@
         // the same values as BROWSER in src/state/scheme.ts.
         if (s === "dark") {
           document.getElementById("icon").href = "/favicon-dark.svg";
+          document.getElementById("icon-png").href = "/favicon-dark-32.png";
           document.getElementById("bar").content = "#0c0c10";
         }
       })();

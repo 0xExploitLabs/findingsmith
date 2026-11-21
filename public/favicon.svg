@@ -1,8 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
-  <!-- A report page whose corner breaks into pixels, in the light theme's sky blue.
-       favicon-dark.svg is the same in violet; the page picks one to match its theme. -->
+  <!-- A report page whose corner breaks into pixels, on the light theme's sky blue: the
+       colour of the hero. favicon-dark.svg is the same in violet; the page picks one to
+       match its theme. The lines take a deeper blue so they still read at 16 pixels. -->
   <style>
-    .tile, .ink { fill: #007ad6; }
+    .tile { fill: #29a3ff; }
+    .ink { fill: #007ad6; }
   </style>
   <rect class="tile" width="16" height="16" rx="3.6"/>
   <g shape-rendering="crispEdges">
