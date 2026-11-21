@@ -36,3 +36,33 @@ export function tint(hex: string, amount: number): string {
 export function isHexColor(value: string): boolean {
   return /^#[0-9a-fA-F]{6}$/.test(value);
 }
+
+/** The text colour that reads on a fill of this colour: white, or ink on a light one. */
+export function onColor(hex: string): string {
+  const n = Number.parseInt(hex.replace("#", ""), 16);
+  const channel = (c: number) => {
+    const v = c / 255;
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  };
+  const luminance =
+    0.2126 * channel((n >> 16) & 255) +
+    0.7152 * channel((n >> 8) & 255) +
+    0.0722 * channel(n & 255);
+  return luminance > 0.42 ? INK : PAPER;
+}
+
+/**
+ * The cover's lower edge breaks up into pixels, the way Debrief draws: for
+ * each row below the block, which columns are inked. The pattern is fixed, so
+ * a report looks the same every time it is made.
+ */
+export function coverPixels(columns: number, rows: number): boolean[][] {
+  const fill = [0.66, 0.36, 0.15, 0.06];
+  return Array.from({ length: rows }, (_, r) =>
+    Array.from({ length: columns }, (_, c) => {
+      let h = Math.imul(c + 11, 374761393) ^ Math.imul(r + 7, 668265263);
+      h = Math.imul(h ^ (h >>> 13), 1274126177);
+      return ((h ^ (h >>> 16)) >>> 0) / 4294967295 < (fill[r] ?? 0.04);
+    }),
+  );
+}

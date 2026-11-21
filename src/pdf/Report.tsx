@@ -7,6 +7,7 @@ import { findSection, splitSections } from "../markdown/sections";
 import { hasContent } from "../markdown/text";
 import { MarkdownPdf, type MdContext, type PdfImage } from "./markdown";
 import {
+  coverPixels,
   DISPLAY,
   FAINT,
   INK,
@@ -14,6 +15,7 @@ import {
   MEDIUM_TEXT,
   MONO,
   MUTED,
+  onColor,
   PAPER,
   RULE,
   SANS,
@@ -195,7 +197,7 @@ export function ReportDocument({
       language="en"
       pageMode="useOutlines"
     >
-      <Cover project={project} accent={accent} logo={input.logo} />
+      <Cover project={project} accent={accent} logo={input.logo} items={numbered} />
 
       <Page size="A4" style={pageStyle} bookmark="Contents">
         {chrome}
@@ -391,14 +393,25 @@ function PageChrome({ project, accent }: { project: Project; accent: string }) {
   );
 }
 
+/** The side of one pixel of the cover's broken edge: 34 of them span the page. */
+const COVER_PIXEL = PAGE.width / 34;
+const COVER_ROWS = coverPixels(34, 4);
+
+/**
+ * The cover: who made the report and how it is classified on white, then a
+ * block of the report's colour carrying its title, whose lower edge breaks up
+ * into pixels, then what was found and the report's particulars.
+ */
 function Cover({
   project,
   accent,
   logo,
+  items,
 }: {
   project: Project;
   accent: string;
   logo: PdfImage | null;
+  items: Numbered[];
 }) {
   const meta: [string, string][] = [
     ["Prepared for", project.client],
@@ -408,7 +421,19 @@ function Cover({
     ["Report date", formatDate(project.reportDate)],
     ["Version", project.version],
   ].filter((row): row is [string, string] => !!row[1]);
-  const logoHeight = logo ? Math.min(46, (180 / logo.width) * logo.height) : 0;
+  const logoHeight = logo ? Math.min(44, (180 / logo.width) * logo.height) : 0;
+  const on = onColor(accent);
+  const counts = SEVERITIES.map((s) => ({
+    severity: s,
+    count: items.filter((it) => it.rating.severity === s).length,
+  })).filter((c) => c.count > 0);
+  const label = {
+    fontSize: 6.8,
+    color: FAINT,
+    letterSpacing: 1.1,
+    textTransform: "uppercase" as const,
+    fontWeight: 700,
+  };
   return (
     <Page
       size="A4"
@@ -417,147 +442,174 @@ function Cover({
     >
       <View
         style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          bottom: 0,
-          width: 14,
-          backgroundColor: accent,
+          height: 112,
+          paddingHorizontal: PAGE.marginX,
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
         }}
-      />
-      <View
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 14,
-          bottom: 0,
-          width: 4,
-          backgroundColor: tint(accent, 0.6),
-        }}
-      />
-      <View
-        style={{ flex: 1, paddingLeft: 74, paddingRight: 60, paddingTop: 64, paddingBottom: 56 }}
       >
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "center",
-            minHeight: 46,
-          }}
-        >
-          {logo ? (
-            <Image
-              src={logo.src}
-              style={{ height: logoHeight, width: (logoHeight / logo.height) * logo.width }}
-            />
-          ) : (
-            <Text
-              style={{
-                fontSize: 9,
-                fontWeight: 700,
-                letterSpacing: 1.6,
-                textTransform: "uppercase",
-                color: MUTED,
-              }}
-            >
-              {project.preparedBy}
-            </Text>
-          )}
-          <View
-            style={{
-              borderWidth: 1,
-              borderColor: accent,
-              borderRadius: 3,
-              paddingVertical: 4,
-              paddingHorizontal: 9,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 7.4,
-                fontWeight: 700,
-                color: accent,
-                letterSpacing: 1.4,
-                textTransform: "uppercase",
-              }}
-            >
-              {project.classification}
-            </Text>
-          </View>
-        </View>
-
-        <View style={{ marginTop: 190 }}>
+        {logo ? (
+          <Image
+            src={logo.src}
+            style={{ height: logoHeight, width: (logoHeight / logo.height) * logo.width }}
+          />
+        ) : (
           <Text
             style={{
-              fontSize: 9,
+              fontSize: 9.5,
               fontWeight: 700,
-              letterSpacing: 2.2,
-              color: accent,
+              letterSpacing: 1.6,
               textTransform: "uppercase",
-            }}
-          >
-            Penetration test report
-          </Text>
-          <Text
-            style={{
-              fontFamily: DISPLAY,
-              fontSize: 32,
-              lineHeight: 1.12,
-              marginTop: 14,
               color: INK,
             }}
           >
-            {project.name || "Untitled assessment"}
+            {project.preparedBy}
           </Text>
-          {project.client ? (
-            <Text style={{ fontSize: 14, color: MUTED, marginTop: 14 }}>{project.client}</Text>
-          ) : null}
-          <View style={{ width: 56, height: 3, backgroundColor: accent, marginTop: 26 }} />
-        </View>
-
-        <View style={{ marginTop: "auto" }}>
-          <View
+        )}
+        <View
+          style={{
+            borderWidth: 1,
+            borderColor: accent,
+            borderRadius: 3,
+            paddingVertical: 4,
+            paddingHorizontal: 9,
+          }}
+        >
+          <Text
             style={{
-              flexDirection: "row",
-              flexWrap: "wrap",
-              borderTopWidth: 0.75,
-              borderTopColor: RULE,
+              fontSize: 7.4,
+              fontWeight: 700,
+              color: accent,
+              letterSpacing: 1.4,
+              textTransform: "uppercase",
             }}
           >
-            {meta.map(([label, value]) => (
-              <View
-                key={label}
-                style={{
-                  width: "50%",
-                  paddingTop: 11,
-                  paddingBottom: 11,
-                  paddingRight: 12,
-                  borderBottomWidth: 0.75,
-                  borderBottomColor: RULE,
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 6.8,
-                    color: FAINT,
-                    letterSpacing: 1.1,
-                    textTransform: "uppercase",
-                    fontWeight: 700,
-                  }}
-                >
-                  {label}
-                </Text>
-                <Text style={{ fontSize: 10, marginTop: 3, color: INK }}>{value}</Text>
-              </View>
-            ))}
-          </View>
-          <Text style={{ fontSize: 7, color: FAINT, lineHeight: 1.5, marginTop: 16 }}>
-            {project.classification === "Public"
-              ? "This report may be shared publicly."
-              : `This document is ${project.classification.toLowerCase()}. It contains security-sensitive information about ${project.client || "the assessed organisation"} and must be shared only with authorised recipients.`}
+            {project.classification}
           </Text>
         </View>
+      </View>
+
+      <View
+        style={{
+          backgroundColor: accent,
+          minHeight: 372,
+          paddingHorizontal: PAGE.marginX,
+          paddingTop: 60,
+          paddingBottom: 44,
+          justifyContent: "flex-end",
+        }}
+      >
+        <Text
+          style={{
+            fontSize: 9,
+            fontWeight: 700,
+            letterSpacing: 2.2,
+            color: on,
+            opacity: 0.78,
+            textTransform: "uppercase",
+          }}
+        >
+          Penetration test report
+        </Text>
+        <Text
+          style={{ fontFamily: DISPLAY, fontSize: 36, lineHeight: 1.1, marginTop: 14, color: on }}
+        >
+          {project.name || "Untitled assessment"}
+        </Text>
+        {project.client ? (
+          <Text style={{ fontSize: 14, color: on, opacity: 0.86, marginTop: 14 }}>
+            {project.client}
+          </Text>
+        ) : null}
+      </View>
+      {/* The block's edge, broken into pixels that thin out down the page. */}
+      <View style={{ height: COVER_PIXEL * COVER_ROWS.length }}>
+        {COVER_ROWS.map((row, r) =>
+          row.map((inked, c) =>
+            inked ? (
+              <View
+                key={`${r}-${c}`}
+                style={{
+                  position: "absolute",
+                  // Overlapped by a hair, so no seam shows between neighbours.
+                  top: r * COVER_PIXEL - 0.3,
+                  left: c * COVER_PIXEL - 0.15,
+                  width: COVER_PIXEL + 0.3,
+                  height: COVER_PIXEL + 0.3,
+                  backgroundColor: tint(accent, [0, 0.3, 0.55, 0.72][r] ?? 0.8),
+                }}
+              />
+            ) : null,
+          ),
+        )}
+      </View>
+
+      <View
+        style={{
+          flex: 1,
+          paddingHorizontal: PAGE.marginX,
+          paddingBottom: 46,
+          justifyContent: "flex-end",
+        }}
+      >
+        {counts.length > 0 ? (
+          <View style={{ marginBottom: 20 }}>
+            <Text style={label}>
+              {items.length} finding{items.length === 1 ? "" : "s"}
+            </Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: 7 }}>
+              {counts.map(({ severity, count }) => (
+                <View
+                  key={severity}
+                  style={{ flexDirection: "row", alignItems: "center", marginRight: 18 }}
+                >
+                  <View
+                    style={{
+                      width: 7,
+                      height: 7,
+                      borderRadius: 1.2,
+                      backgroundColor: SEVERITY_HEX[severity],
+                      marginRight: 6,
+                    }}
+                  />
+                  <Text style={{ fontSize: 10.5, fontWeight: 700, color: INK }}>{count}</Text>
+                  <Text style={{ fontSize: 10.5, color: MUTED, marginLeft: 4 }}>{severity}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
+        <View
+          style={{
+            flexDirection: "row",
+            flexWrap: "wrap",
+            borderTopWidth: 0.75,
+            borderTopColor: RULE,
+          }}
+        >
+          {meta.map(([name, value]) => (
+            <View
+              key={name}
+              style={{
+                width: "50%",
+                paddingTop: 10,
+                paddingBottom: 10,
+                paddingRight: 12,
+                borderBottomWidth: 0.75,
+                borderBottomColor: RULE,
+              }}
+            >
+              <Text style={label}>{name}</Text>
+              <Text style={{ fontSize: 10, marginTop: 3, color: INK }}>{value}</Text>
+            </View>
+          ))}
+        </View>
+        <Text style={{ fontSize: 7, color: FAINT, lineHeight: 1.5, marginTop: 14 }}>
+          {project.classification === "Public"
+            ? "This report may be shared publicly."
+            : `This document is ${project.classification.toLowerCase()}. It contains security-sensitive information about ${project.client || "the assessed organisation"} and must be shared only with authorised recipients.`}
+        </Text>
       </View>
     </Page>
   );
@@ -781,11 +833,23 @@ function Overview({ num, items, ctx }: { num: string; items: Numbered[]; ctx: Md
 function Grid({ widths, head, rows }: { widths: number[]; head: string[]; rows: ReactNode[][] }) {
   return (
     <View style={{ borderTopWidth: 1.2, borderTopColor: INK }}>
-      <View style={{ flexDirection: "row", borderBottomWidth: 0.75, borderBottomColor: RULE }}>
+      <View
+        style={{
+          flexDirection: "row",
+          backgroundColor: WASH,
+          borderBottomWidth: 0.75,
+          borderBottomColor: RULE,
+        }}
+      >
         {head.map((h, i) => (
           <View
             key={h}
-            style={{ width: `${(widths[i] ?? 0) * 100}%`, paddingVertical: 6, paddingRight: 8 }}
+            style={{
+              width: `${(widths[i] ?? 0) * 100}%`,
+              paddingVertical: 6,
+              paddingRight: 8,
+              paddingLeft: i === 0 ? 6 : 0,
+            }}
           >
             <Text
               style={{
@@ -815,7 +879,12 @@ function Grid({ widths, head, rows }: { widths: number[]; head: string[]; rows: 
           {row.map((cell, c) => (
             <View
               key={c}
-              style={{ width: `${(widths[c] ?? 0) * 100}%`, paddingVertical: 6.5, paddingRight: 8 }}
+              style={{
+                width: `${(widths[c] ?? 0) * 100}%`,
+                paddingVertical: 6.5,
+                paddingRight: 8,
+                paddingLeft: c === 0 ? 6 : 0,
+              }}
             >
               {cell}
             </View>
