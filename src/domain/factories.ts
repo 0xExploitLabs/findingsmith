@@ -64,7 +64,6 @@ export function createProject(name: string): Project {
     startDate: "",
     endDate: "",
     reportDate: today(),
-    version: "1.0",
     classification: "Confidential",
     idPrefix: "F",
     accent: "#036877",

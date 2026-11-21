@@ -119,7 +119,7 @@ export function PixelField({
       const t = time / 9000;
       const drift = top / 900;
       const blink = Math.floor(time / 640);
-      const twinkle = Math.floor(time / 900);
+      const twinkle = Math.floor(time / 1400);
       for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols; x++) {
           const n =
@@ -140,10 +140,9 @@ export function PixelField({
           let shade = 0;
           if (alpha === 255 && tone === "accent") {
             const w = noise(x * 0.07 - t * 0.8, y * 0.09 + t * 0.5, t * 1.3);
-            shade = w > 0.7 ? 0.2 : w > 0.61 ? 0.1 : w < 0.3 ? -0.12 : w < 0.38 ? -0.06 : 0;
-            const spark = hash(x, y, twinkle);
-            if (spark > 0.988) shade = 0.34;
-            else if (spark < 0.008) shade = -0.2;
+            // Kept faint: the sides should breathe, not compete with the headline.
+            shade = w > 0.74 ? 0.09 : w > 0.66 ? 0.045 : w < 0.27 ? -0.05 : 0;
+            if (hash(x, y, twinkle) > 0.997) shade = 0.2;
           }
           const toward = shade > 0 ? lift : sink;
           const mixed = Math.abs(shade);

@@ -379,11 +379,7 @@ function PageChrome({ project, accent }: { project: Project; accent: string }) {
           justifyContent: "space-between",
         }}
       >
-        <Text style={{ fontSize: 7.4, color: MUTED }}>
-          {[project.preparedBy, project.version ? `Version ${project.version}` : ""]
-            .filter(Boolean)
-            .join("  /  ")}
-        </Text>
+        <Text style={{ fontSize: 7.4, color: MUTED }}>{project.preparedBy}</Text>
         <Text
           style={{ fontSize: 7.4, color: MUTED }}
           render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`}
@@ -419,7 +415,6 @@ function Cover({
     ["Assessors", project.assessors],
     ["Assessment period", period(project)],
     ["Report date", formatDate(project.reportDate)],
-    ["Version", project.version],
   ].filter((row): row is [string, string] => !!row[1]);
   const logoHeight = logo ? Math.min(44, (180 / logo.width) * logo.height) : 0;
   const on = onColor(accent);

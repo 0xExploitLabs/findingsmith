@@ -281,13 +281,6 @@
   }
 }
 
-@keyframes pixel-in {
-  from {
-    opacity: 0;
-    transform: scale(0.2);
-  }
-}
-
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -1321,12 +1314,6 @@ a.btn:active {
 .btn-raised:enabled:hover,
 a.btn-raised:hover {
   box-shadow: 0 6px 14px -8px rgb(var(--brand-shadow) / 0.45);
-}
-/* A row of pixels shared between severities; they step in one after another. */
-.pixel-meter-cell {
-  height: 8px;
-  border-radius: 2px;
-  animation: pixel-in 0.42s var(--ease-out) calc(var(--i) * 14ms) both;
 }
 /* Behind a workspace page: a wash of the brand colour from its top edge. */
 .page-glow {

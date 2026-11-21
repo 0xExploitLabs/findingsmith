@@ -231,9 +231,7 @@ function Panel({
         />
       </div>
 
-      {findings.length > 0 ? (
-        <SeverityMix counts={counts} cells={18} labels={false} className="px-4 pt-1.5" />
-      ) : null}
+      {findings.length > 0 ? <SeverityMix counts={counts} compact className="px-4 pt-1.5" /> : null}
 
       <div className="mt-2.5 min-h-0 flex-1 overflow-y-auto px-2 pb-3">
         {findings.length === 0 ? (

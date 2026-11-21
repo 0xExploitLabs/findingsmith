@@ -415,7 +415,7 @@ const Head = memo(
               <InlineText
                 value={finding.cvss}
                 onChange={(cvss) => onChange({ cvss: cvss.replace(/\s+/g, "") })}
-                placeholder="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+                placeholder="CVSS:3.1/AV:N/AC:L/… or 9.8"
                 mono
                 label="CVSS vector or score"
                 fit
@@ -489,7 +489,7 @@ const Head = memo(
                   <InlineText
                     value={finding.endpoint}
                     onChange={(endpoint) => onChange({ endpoint })}
-                    placeholder="https://app.example.com/api/invoices/{id}"
+                    placeholder="/api/invoices/{id}"
                     mono
                     label="Endpoint URL"
                     autoFocus={justAdded === "endpoint"}

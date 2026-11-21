@@ -22,7 +22,7 @@ import { PixelCorner } from "../../ui/motion";
 import { PixelField } from "../../ui/PixelField";
 import { MOD_KEY } from "../../ui/platform";
 import { Button, cx, IconButton, Kbd, Menu, SEVERITY_CLASS } from "../../ui/primitives";
-import { countSeverities, SeverityMix } from "../../ui/SeverityMix";
+import { countSeverities } from "../../ui/SeverityMix";
 import { toast } from "../../ui/toast";
 import { Title } from "../doc/DocParts";
 import { STATUS_DOT } from "../finding/FindingEditor";
@@ -141,7 +141,6 @@ export function ProjectHome({
                 </li>
               ))}
             </ul>
-            <SeverityMix counts={counts} cells={48} labels={false} className="mt-3" />
             <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3">
               <h2
                 id="findings-title"
