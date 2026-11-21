@@ -1,10 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
-  <!-- A report page whose corner breaks into pixels. Sky blue on a light browser, violet on a dark one. -->
+  <!-- A report page whose corner breaks into pixels, in the light theme's sky blue.
+       favicon-dark.svg is the same in violet; the page picks one to match its theme. -->
   <style>
     .tile, .ink { fill: #007ad6; }
-    @media (prefers-color-scheme: dark) {
-      .tile, .ink { fill: #9886ff; }
-    }
   </style>
   <rect class="tile" width="16" height="16" rx="3.6"/>
   <g shape-rendering="crispEdges">

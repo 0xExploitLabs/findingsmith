@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+  <!-- A report page whose corner breaks into pixels, in the dark theme's violet.
+       favicon.svg is the same in sky blue; the page picks one to match its theme. -->
+  <style>
+    .tile, .ink { fill: #9886ff; }
+  </style>
+  <rect class="tile" width="16" height="16" rx="3.6"/>
+  <g shape-rendering="crispEdges">
+    <path fill="#fff" d="M4 2h8v8h-2v2H8v2H4z"/>
+    <rect x="10" y="10" width="2" height="2" fill="#fff" opacity=".6"/>
+    <rect x="8" y="12" width="2" height="2" fill="#fff" opacity=".6"/>
+    <rect x="10" y="12" width="2" height="2" fill="#fff" opacity=".3"/>
+    <rect class="ink" x="5.5" y="4" width="3" height="1"/>
+    <rect class="ink" x="5.5" y="6" width="5" height="1" opacity=".55"/>
+    <rect class="ink" x="5.5" y="8" width="4" height="1" opacity=".55"/>
+  </g>
+</svg>
