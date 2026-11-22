@@ -61,11 +61,37 @@ export function MarkdownPdf({ source, ctx }: { source: string; ctx: MdContext })
   return <Flow>{blocks(tree.children, ctx, "r")}</Flow>;
 }
 
-function blocks(nodes: RootContent[], ctx: MdContext, key: string): ReactNode[] {
-  return nodes.map((node, i) => block(node, ctx, `${key}.${i}`, i === 0));
+/**
+ * How much of the page a heading over this Markdown keeps with it, at least
+ * `min`. A screenshot never splits, so a heading over one keeps all of it and
+ * goes to the next page with it rather than stay behind alone.
+ */
+export function keepWithStart(source: string, ctx: MdContext, min: number): number {
+  return Math.max(min, leadHeight(parseMarkdown(source).children[0], ctx));
 }
 
-function block(node: RootContent, ctx: MdContext, key: string, first: boolean): ReactNode {
+/** The height of the screenshot a block opens with, margins included, or 0. */
+function leadHeight(node: RootContent | undefined, ctx: MdContext): number {
+  if (node?.type !== "paragraph") return 0;
+  const lead = node.children.find((n) => n.type !== "text" || n.value.trim());
+  if (lead?.type !== "image") return 0;
+  const img = lead.url.startsWith("asset:") ? ctx.images.get(lead.url.slice(6)) : undefined;
+  if (!img) return 0;
+  // Its margin, frame and padding, and the caption under it.
+  return 6 + 7.5 + imageSize(img, ctx).height + (lead.alt ? 16 : 0);
+}
+
+function blocks(nodes: RootContent[], ctx: MdContext, key: string): ReactNode[] {
+  return nodes.map((node, i) => block(node, ctx, `${key}.${i}`, i === 0, nodes[i + 1]));
+}
+
+function block(
+  node: RootContent,
+  ctx: MdContext,
+  key: string,
+  first: boolean,
+  next?: RootContent,
+): ReactNode {
   const top = first ? 0 : 7;
   switch (node.type) {
     case "paragraph":
@@ -75,7 +101,7 @@ function block(node: RootContent, ctx: MdContext, key: string, first: boolean): 
       return (
         <Text
           key={key}
-          minPresenceAhead={40}
+          minPresenceAhead={Math.max(40, leadHeight(next, ctx) + 7)}
           style={{
             ...BODY,
             fontSize: size,
@@ -170,6 +196,15 @@ function paragraph(children: PhrasingContent[], ctx: MdContext, key: string, top
   );
 }
 
+/** A screenshot's size on the page. */
+function imageSize(img: PdfImage, ctx: MdContext): { width: number; height: number } {
+  // Points at 144 dpi keep retina screenshots sharp without blowing past the column.
+  const natural = img.width * 0.5;
+  const width = Math.min(ctx.columnWidth, natural);
+  const height = Math.min(520, (width / img.width) * img.height);
+  return { width: (height / img.height) * img.width, height };
+}
+
 function image(url: string, alt: string, ctx: MdContext, key: string): ReactNode {
   const img = url.startsWith("asset:") ? ctx.images.get(url.slice(6)) : undefined;
   if (!img) {
@@ -179,11 +214,7 @@ function image(url: string, alt: string, ctx: MdContext, key: string): ReactNode
       </Text>
     );
   }
-  // Points at 144 dpi keep retina screenshots sharp without blowing past the column.
-  const natural = img.width * 0.5;
-  const width = Math.min(ctx.columnWidth, natural);
-  const height = Math.min(520, (width / img.width) * img.height);
-  const finalWidth = (height / img.height) * img.width;
+  const { width: finalWidth, height } = imageSize(img, ctx);
   return (
     <View key={key} wrap={false} style={{ marginVertical: 6 }}>
       <View
