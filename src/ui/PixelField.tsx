@@ -153,6 +153,7 @@ export function PixelField({
   still = false,
   clear,
   tail = 0,
+  plain = false,
   className,
 }: {
   shape: FieldShape;
@@ -166,6 +167,8 @@ export function PixelField({
   clear?: RefObject<HTMLElement | null>;
   /** A cloud thins out over this many pixels at its foot, into the page below. */
   tail?: number;
+  /** Three flat tones and nothing else: no dither, no blocks, the same on every load. */
+  plain?: boolean;
   className?: string;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -182,7 +185,7 @@ export function PixelField({
     const sink = triplet("--brand-on-field");
     const strength = tone === "accent" ? 1 : 0.16;
     const frozen = still || reducedMotion();
-    const seed = pageSeed() + (shape === "cloud" ? 0 : shape === "fall" ? 101 : 211);
+    const seed = plain ? 0 : pageSeed() + (shape === "cloud" ? 0 : shape === "fall" ? 101 : 211);
     const colour = (towards: number[], amount: number, alpha: number) =>
       `rgb(${rgb.map((c, i) => Math.round(c + ((towards[i] ?? c) - c) * amount)).join(" ")} / ${alpha * strength})`;
     const flat = {
@@ -243,6 +246,7 @@ export function PixelField({
       const masses = shape === "cloud" ? scatter(seed, cols, rows) : [];
       const foot = rows - tail / size;
       const massAt = (x: number, y: number) => {
+        if (plain) return 1.15 * (shape === "fall" ? 1 - y / rows : y / rows) ** 1.15;
         if (shape === "fall") return 1.7 * (1 - y / rows) ** 1.35;
         if (shape === "rise") return 1.7 * (y / rows) ** 1.35;
         let sum = 0;
@@ -322,7 +326,7 @@ export function PixelField({
             noise(x * 0.11 + t + seed, y * 0.16 + drift, t * 1.7) * 0.62 +
             noise(x * 0.31, y * 0.37 - t + drift * 2 + seed, t * 3) * 0.28 +
             noise(x * 0.83 - t * 2, y * 0.79, t * 4) * 0.1;
-          value[i] = (base[i] ?? 0) + (n - 0.5) * 1.9;
+          value[i] = (base[i] ?? 0) + (n - 0.5) * (plain ? 1.1 : 1.9);
         }
       }
       for (let y = 0; y < rows; y++) {
@@ -337,6 +341,24 @@ export function PixelField({
               Math.hypot((x + 0.5) * size - pointer.x, (y + 0.5) * size - pointer.y) / REACH;
             v +=
               pointer.power * (0.3 * Math.exp(-((d - 1) ** 2) * 7) - 0.62 * Math.exp(-d * d * 2.4));
+          }
+          if (plain) {
+            // The quiet field: solid, half and faint, with a loose pixel here and there.
+            const alpha =
+              v > 0.92
+                ? 1
+                : v > 0.78
+                  ? 0.59
+                  : v > 0.66
+                    ? 0.27
+                    : (base[i] ?? 0) > 0.14 && v > 0.4 && hash(x, y, blink) > 0.93
+                      ? 0.18
+                      : 0;
+            if (alpha > 0) {
+              ctx.fillStyle = colour(rgb, 0, alpha);
+              ctx.fillRect(px(x), px(y), px(x + 1) - px(x), px(y + 1) - px(y));
+            }
+            continue;
           }
           let level =
             v > 0.94
@@ -446,7 +468,7 @@ export function PixelField({
       window.removeEventListener("pointermove", onPointer);
       document.documentElement.removeEventListener("pointerleave", onLeave);
     };
-  }, [shape, cell, tone, still, clear, tail, scheme]);
+  }, [shape, cell, tone, still, clear, tail, plain, scheme]);
 
   return (
     <div aria-hidden="true" className={cx("size-full", className)}>

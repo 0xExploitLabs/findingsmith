@@ -67,7 +67,7 @@ export function ProjectHome({
     <div className="relative min-h-full overflow-hidden">
       {/* The overview's pixel field, still: it thins out behind the project's name. */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-[150px]">
-        <PixelField shape="fall" cell={18} still />
+        <PixelField shape="fall" cell={18} still plain />
       </div>
       <article className="relative mx-auto w-full max-w-[920px] px-6 pb-16 pt-[118px] sm:px-10">
         <div className="relative flex items-start gap-3">

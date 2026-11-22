@@ -5,6 +5,7 @@ import { splitSections } from "../../markdown/sections";
 import { href } from "../../state/router";
 import { PixelField } from "../../ui/PixelField";
 import { reducedMotion, useScrollProgress } from "../../ui/scroll";
+import { ART, FOCUS, FOCUS_SIZE, PAGE_ART } from "./pageArt";
 import { ReportContents, ReportCover, ReportSheet } from "./ReportSheet";
 import {
   SAMPLE_ACCENT,
@@ -20,14 +21,17 @@ import {
   SAMPLE_WEAKNESS,
 } from "./sample";
 
-/* The scroll through the pinned screen, 0 to 1: the finding is read from its
-   head to its foot at full size, the view pulls back until the whole page
-   hangs in the colour field with the cover and the contents fanned out behind
-   it, and then the words arrive. */
-const READ_END = 0.46;
-const PULL_START = 0.5;
-const PULL_END = 0.8;
-const SAID_START = 0.78;
+/* The scroll through the pinned screen, 0 to 1. The page is met as a drawing
+   in large pixels, from deep inside its score; the view draws back and the
+   drawing turns into the typeset page. That is read from its head to its foot
+   at full size, the view pulls back until the whole page hangs in the colour
+   field with the cover and the contents fanned out behind it, and then the
+   words arrive. */
+const DRAWN_END = 0.2;
+const READ_END = 0.5;
+const PULL_START = 0.54;
+const PULL_END = 0.82;
+const SAID_START = 0.8;
 
 /** What the page holds, said beside it. */
 const POINTS: [string, string][] = [
@@ -45,6 +49,11 @@ const POINTS: [string, string][] = [
 /** The share of a page's width that its column of text takes: A4 less its two margins. */
 const COLUMN = 0.812;
 
+/* Where the typeset score sits on its page, as fractions of the page, and how
+   far the drawing is moved (in its own units) so that its score lies on it. */
+const SCORE = { x: 0.1373, y: 0.1939 };
+const DRAWN_SHIFT = { x: (FOCUS.x - SCORE.x) * ART.width, y: (FOCUS.y - SCORE.y) * ART.height };
+
 const clamp = (x: number) => Math.min(1, Math.max(0, x));
 const easeInOut = (t: number) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2);
 const mix = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -58,6 +67,10 @@ interface Journey {
   /** At rest: the page scaled into its place beside the words. */
   restX: number;
   restScale: number;
+  /** Inside the score: how far in, and where the stack sits to centre it at scale 1. */
+  inside: number;
+  focus: [number, number];
+  centre: [number, number];
 }
 
 /** An element's place inside `root` as laid out, whatever transforms it wears. */
@@ -94,8 +107,20 @@ export function ReportShowcase() {
     let y = 0;
     let scale = j.restScale;
     let fan = 1;
-    if (p < PULL_START) {
-      const t = 1 - (1 - clamp(p / READ_END)) ** 1.5;
+    let real = 1;
+    if (p < DRAWN_END) {
+      // Out of the score: scaled in equal ratios, the focus sliding from the
+      // middle of the screen to its place on the page.
+      const t = easeInOut(p / DRAWN_END);
+      scale = j.inside ** (1 - t);
+      const settle = t ** 2;
+      x = mix(j.centre[0] - j.focus[0] * scale, j.readX[0], settle);
+      y = mix(j.centre[1] - j.focus[1] * scale, j.readY[0], settle);
+      fan = 0;
+      // The drawing turns into type while the score still fills the view.
+      real = clamp((t - 0.28) / 0.3);
+    } else if (p < PULL_START) {
+      const t = 1 - (1 - clamp((p - DRAWN_END) / (READ_END - DRAWN_END))) ** 1.5;
       x = mix(j.readX[0], j.readX[1], easeInOut(clamp((t - 0.2) / 0.6)));
       y = mix(j.readY[0], j.readY[1], t);
       scale = 1;
@@ -113,6 +138,7 @@ export function ReportShowcase() {
     el.style.setProperty("--y", `${y.toFixed(1)}px`);
     el.style.setProperty("--s", scale.toFixed(4));
     el.style.setProperty("--fan", fan.toFixed(3));
+    el.style.setProperty("--real", real.toFixed(3));
     el.style.setProperty("--said", said.toFixed(3));
     el.toggleAttribute("data-said", said > 0.5);
   };
@@ -150,6 +176,16 @@ export function ReportShowcase() {
         readY: [head, Math.min(head, foot)],
         restX: (rest.offsetWidth - fanned) / 2 + width * restScale * spread,
         restScale,
+        // The score's digits fill the middle of the screen.
+        inside: Math.max(
+          1,
+          Math.min(
+            (view.clientWidth * 0.5) / (FOCUS_SIZE.w * width),
+            (view.clientHeight * 0.4) / (FOCUS_SIZE.h * height),
+          ),
+        ),
+        focus: [SCORE.x * width, SCORE.y * height],
+        centre: [view.clientWidth / 2 - at.x, view.clientHeight / 2 - at.y],
       };
       place(reducedMotion() ? 1 : progress.current, section);
     };
@@ -224,8 +260,37 @@ export function ReportShowcase() {
                   parties={SAMPLE_PARTIES}
                   properties={properties}
                   size="a4"
+                  page="finding"
                   className="report-page"
                 />
+                {/* The same page drawn in blocks, lying over it until the view has drawn back. */}
+                <svg
+                  viewBox={`${DRAWN_SHIFT.x} ${DRAWN_SHIFT.y} ${ART.width} ${ART.height}`}
+                  preserveAspectRatio="none"
+                  shapeRendering="crispEdges"
+                  aria-hidden="true"
+                  className="report-page report-drawn size-full overflow-visible"
+                >
+                  <rect
+                    x={DRAWN_SHIFT.x}
+                    y={DRAWN_SHIFT.y}
+                    width={ART.width}
+                    height={ART.height}
+                    className="fill-sheet"
+                  />
+                  {PAGE_ART.map((b, i) => (
+                    <rect
+                      // biome-ignore lint/suspicious/noArrayIndexKey: a fixed drawing, never reordered
+                      key={i}
+                      x={b.x}
+                      y={b.y}
+                      width={b.w}
+                      height={b.h}
+                      fill={b.fill}
+                      opacity={b.o}
+                    />
+                  ))}
+                </svg>
               </div>
             </div>
 

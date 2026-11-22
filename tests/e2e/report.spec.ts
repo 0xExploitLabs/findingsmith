@@ -161,7 +161,7 @@ test("the sample finding is a whole page, as the report prints it", async ({ pag
   }
   // Set in the report's own face, and beside it the cover and the contents.
   expect(await sheet.evaluate((el) => getComputedStyle(el).fontFamily)).toContain("Report Sans");
-  await expect(page.locator(".report-page")).toHaveCount(3);
+  await expect(page.locator(".report-page[data-page]")).toHaveCount(3);
 });
 
 test("the footer says where the organisation is found", async ({ page }) => {

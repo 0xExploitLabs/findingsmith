@@ -156,6 +156,7 @@ export function ReportSheet({
   properties = [],
   reference = "F-01",
   folio = "6 / 12",
+  page,
   size = "fit",
   className,
 }: {
@@ -167,12 +168,20 @@ export function ReportSheet({
   properties?: { label: string; value: ReactNode }[];
   reference?: string;
   folio?: string;
+  /** Names the page for styling, as `data-page`. */
+  page?: string;
   size?: Fit;
   className?: string;
 }) {
   const color = score ? SEVERITY_HEX[score.severity] : "";
   return (
-    <Sheet as="article" size={size} className={className} sheetClassName="pb-[64px] pt-[70px]">
+    <Sheet
+      as="article"
+      size={size}
+      name={page}
+      className={className}
+      sheetClassName="pb-[64px] pt-[70px]"
+    >
       {(page) => (
         <div style={{ paddingInline: page.margin }}>
           <Chrome page={page} parties={parties} folio={folio} />

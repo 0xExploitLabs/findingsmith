@@ -204,8 +204,12 @@ export function SiteShell({
               </span>
             </div>
           </header>
-          <Page ending={ending}>{children}</Page>
-          <Footer onNewProject={onNewProject} />
+          {ending === "field" ? (
+            <Page>{children}</Page>
+          ) : (
+            <main className="flex-1">{children}</main>
+          )}
+          <Footer onNewProject={onNewProject} curtain={ending === "field"} />
         </div>
       </ScrollContext>
     </div>
@@ -216,7 +220,7 @@ export function SiteShell({
  * The page itself, lying over the footer. As its foot rises it uncovers the
  * footer beneath, and tells it how far along that is.
  */
-function Page({ ending, children }: { ending?: "field"; children: ReactNode }) {
+function Page({ children }: { children: ReactNode }) {
   const ref = useScrollProgress<HTMLElement>("tail", (p, el) => {
     const footer = el.nextElementSibling;
     if (!(footer instanceof HTMLElement)) return;
@@ -225,18 +229,16 @@ function Page({ ending, children }: { ending?: "field"; children: ReactNode }) {
   });
   return (
     <main ref={ref} className="relative z-10 flex-1">
-      <div className={cx("bg-bg", ending !== "field" && "page-edge")}>{children}</div>
-      {ending === "field" ? (
-        // The field's last edge: it breaks into pixels, and the footer shows between them.
-        <div className="pointer-events-none h-36 sm:h-44">
-          <PixelField shape="fall" />
-        </div>
-      ) : null}
+      <div className="bg-bg">{children}</div>
+      {/* The field's last edge: it breaks into pixels, and the footer shows between them. */}
+      <div className="pointer-events-none h-36 sm:h-44">
+        <PixelField shape="fall" />
+      </div>
     </main>
   );
 }
 
-function Footer({ onNewProject }: { onNewProject: () => void }) {
+function Footer({ onNewProject, curtain }: { onNewProject: () => void; curtain: boolean }) {
   const ref = useRef<HTMLElement>(null);
   // The footer waits under the page only when a screen can hold all of it;
   // a taller one would never show its head, so it follows the page instead.
@@ -244,7 +246,8 @@ function Footer({ onNewProject }: { onNewProject: () => void }) {
     const el = ref.current;
     // The scrolling page is the nearest positioned ancestor.
     const scroller = el?.offsetParent;
-    if (!el || !scroller || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!curtain || !el || !scroller) return;
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const settle = () =>
       el.toggleAttribute("data-curtain", el.offsetHeight <= scroller.clientHeight);
     settle();
@@ -263,9 +266,14 @@ function Footer({ onNewProject }: { onNewProject: () => void }) {
       resized.disconnect();
       el.removeEventListener("focusin", reveal);
     };
-  }, []);
+  }, [curtain]);
   return (
-    <footer ref={ref} className="site-footer shrink-0 overflow-hidden pt-20 sm:pt-28">
+    <footer
+      ref={ref}
+      // Where no page lifts off it, the footer is simply there: shown, and alive.
+      data-live={curtain ? undefined : ""}
+      className="site-footer shrink-0 overflow-hidden pt-20 sm:pt-28"
+    >
       <div className="footer-words mx-auto max-w-[1240px] px-6">
         <div className="grid gap-x-16 gap-y-12 md:grid-cols-[minmax(0,1fr)_auto_auto]">
           <div>
