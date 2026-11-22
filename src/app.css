@@ -85,7 +85,7 @@
   --brand-shadow: 16 44 84;
   /* Light is sky blue: a bright field, and a deeper step of it where the accent
      carries text or sits under white text. */
-  --brand-accent: 0 122 214;
+  --brand-accent: 0 116 205;
   --brand-accent-deep: 0 100 180;
   --brand-glow: 0 122 214;
   --brand-field: 41 163 255;
@@ -212,83 +212,113 @@
   }
 }
 
-/* A headline word arrives through a pixel: the block swells and bursts, and the
-   word grows out of where it was. It leaves the same way, backwards. */
-@keyframes word-block {
-  0% {
-    opacity: 1;
-    transform: scale(0.4) rotate(0deg);
-  }
-  38% {
-    opacity: 1;
-    transform: scale(1.9) rotate(90deg);
-  }
-  62%,
-  100% {
-    opacity: 0;
-    transform: scale(0) rotate(90deg);
-  }
-}
-
-@keyframes word-grow {
-  0%,
-  34% {
-    opacity: 0;
-    transform: translateY(0.08em) scale(0.3);
-  }
-  40% {
-    opacity: 1;
-    transform: translateY(0.08em) scale(0.3);
-  }
-  100% {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-@keyframes word-fold {
-  0% {
-    opacity: 1;
-    transform: none;
-  }
-  70% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    transform: scale(0.2);
-  }
-}
-
-@keyframes word-block-out {
-  0%,
-  45% {
-    opacity: 0;
-    transform: scale(0);
-  }
-  70% {
-    opacity: 1;
-    transform: scale(1.5);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(0);
-  }
-}
-
-@keyframes flow-in {
-  from {
-    opacity: 0;
-    transform: translateY(140px) scale(1.1);
-  }
-  18% {
-    opacity: 1;
-  }
-}
-
 @keyframes fade-in {
   from {
     opacity: 0;
+  }
+}
+
+/* A headline line trades one phrase for the other behind a block of pixels
+   that crosses it: the old words are covered from the left as the new ones
+   are uncovered. Each mask slides one way and its words the other, so the
+   words themselves never move. */
+@keyframes wipe-mask-in {
+  from {
+    transform: translateX(-100%);
+  }
+}
+@keyframes wipe-ink-in {
+  from {
+    transform: translateX(100%);
+  }
+}
+@keyframes wipe-mask-out {
+  to {
+    transform: translateX(100%);
+  }
+}
+@keyframes wipe-ink-out {
+  to {
+    transform: translateX(-100%);
+  }
+}
+/* Two names for one crossing, so each trade starts it again. */
+@keyframes wipe-cross-a {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+@keyframes wipe-cross-b {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+@keyframes wipe-show-a {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  10%,
+  90% {
+    opacity: 1;
+  }
+}
+@keyframes wipe-show-b {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  10%,
+  90% {
+    opacity: 1;
+  }
+}
+
+/* The cicada's wings turn on the line where they meet the body. Seen from
+   above, a wing that lifts grows narrower and its tip rises. */
+@keyframes wing-beat-left {
+  50% {
+    transform: scaleX(0.54) skewY(8deg);
+  }
+}
+@keyframes wing-beat-right {
+  50% {
+    transform: scaleX(0.54) skewY(-8deg);
+  }
+}
+/* At rest it opens and closes its wings now and then, the second time less. */
+@keyframes wing-idle-left {
+  0%,
+  28%,
+  52%,
+  100% {
+    transform: none;
+  }
+  14% {
+    transform: scaleX(0.7) skewY(5.5deg);
+  }
+  40% {
+    transform: scaleX(0.82) skewY(3.5deg);
+  }
+}
+@keyframes wing-idle-right {
+  0%,
+  28%,
+  52%,
+  100% {
+    transform: none;
+  }
+  14% {
+    transform: scaleX(0.7) skewY(-5.5deg);
+  }
+  40% {
+    transform: scaleX(0.82) skewY(-3.5deg);
   }
 }
 
@@ -1157,35 +1187,277 @@
 .write-in {
   animation: write-in var(--t, 1.4s) var(--ease-in-out) var(--d, 0s) both;
 }
-.swap-word {
+.swap-line {
+  --swap: 0.95s;
   position: relative;
-  display: inline-block;
+  display: inline-grid;
+  max-width: 100%;
 }
-.swap-word > .pixel {
+.swap-face {
+  grid-area: 1 / 1;
+  justify-self: center;
+  overflow: hidden;
+  /* Room for the italic's overhang and its descenders, without taking any space. */
+  margin: -0.14em -0.16em -0.22em;
+}
+.swap-ink {
+  display: block;
+  padding: 0.14em 0.16em 0.22em;
+}
+.swap-face,
+.swap-ink,
+.swap-wipe,
+.swap-block {
+  animation-duration: var(--swap);
+  animation-timing-function: var(--ease-in-out);
+  animation-delay: calc(0.15s + var(--i) * 0.12s);
+  animation-fill-mode: both;
+}
+:is([data-show="start"], [data-show="0"]) > [data-face="0"],
+[data-show="1"] > [data-face="1"] {
+  animation-name: wipe-mask-in;
+}
+:is([data-show="start"], [data-show="0"]) > [data-face="0"] > .swap-ink,
+[data-show="1"] > [data-face="1"] > .swap-ink {
+  animation-name: wipe-ink-in;
+}
+[data-show="1"] > [data-face="0"],
+[data-show="0"] > [data-face="1"] {
+  animation-name: wipe-mask-out;
+}
+[data-show="1"] > [data-face="0"] > .swap-ink,
+[data-show="0"] > [data-face="1"] > .swap-ink {
+  animation-name: wipe-ink-out;
+}
+.swap-wipe {
   position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 0.42em;
-  height: 0.42em;
-  margin: -0.21em 0 0 -0.21em;
-  background: var(--color-field);
-  animation: word-block 0.72s var(--ease-out) calc(var(--i) * 70ms) both;
+  inset: 0;
+  pointer-events: none;
 }
-.swap-word > .text {
-  display: inline-block;
-  animation: word-grow 0.72s var(--ease-glide) calc(var(--i) * 70ms) both;
+:is([data-show="start"], [data-show="0"]) > .swap-wipe {
+  animation-name: wipe-cross-a;
 }
-[data-leaving] > * > .swap-word > .pixel {
-  animation: word-block-out 0.42s var(--ease-in-out) calc(var(--i) * 70ms) both;
+[data-show="1"] > .swap-wipe {
+  animation-name: wipe-cross-b;
 }
-[data-leaving] > * > .swap-word > .text {
-  animation: word-fold 0.42s var(--ease-in) calc(var(--i) * 70ms) both;
+/* Out of sight: the second phrase before the first trade, and under reduced
+   motion the first phrase and the block. */
+[data-show="start"] > [data-face="1"],
+[data-show="rest"] > [data-face="0"],
+[data-show="rest"] > .swap-wipe {
+  visibility: hidden;
 }
-[data-flow="wait"] {
+/* The block: a solid column with looser pixels before and behind it. */
+.swap-block {
+  position: absolute;
+  inset-block: 0.04em;
+  left: -0.2em;
+  width: 0.4em;
   opacity: 0;
+  animation-timing-function: linear;
+  color: var(--color-field);
 }
-[data-flow="in"] {
-  animation: flow-in 1.2s var(--ease-glide) var(--d, 0s) both;
+:is([data-show="start"], [data-show="0"]) > .swap-wipe > .swap-block {
+  animation-name: wipe-show-a;
+}
+[data-show="1"] > .swap-wipe > .swap-block {
+  animation-name: wipe-show-b;
+}
+.swap-block > i {
+  position: absolute;
+  background: currentColor;
+}
+.swap-block > i:nth-child(1) {
+  left: 30%;
+  width: 40%;
+  inset-block: 0;
+}
+.swap-block > i:nth-child(2) {
+  left: 70%;
+  width: 34%;
+  top: 28%;
+  height: 52%;
+  background:
+    conic-gradient(currentColor 25%, transparent 0 50%, currentColor 0 75%, transparent 0) 0 0 / 4px
+    4px;
+}
+.swap-block > i:nth-child(3) {
+  left: -4%;
+  width: 34%;
+  top: 6%;
+  height: 44%;
+  opacity: 0.62;
+}
+.swap-block > i:nth-child(4) {
+  left: -34%;
+  width: 30%;
+  top: 58%;
+  height: 24%;
+  opacity: 0.34;
+}
+
+/* The entrance every section shares, following the scroll: --p runs from 0 as
+   the element's top reaches the foot of the screen to 1 once it has risen into
+   place. Without a script it is simply in place. */
+.rise-in {
+  opacity: min(1, calc(var(--p, 1) * 1.7));
+  transform: translate3d(0, calc((1 - var(--p, 1)) * 76px), 0)
+    scale(calc(0.965 + var(--p, 1) * 0.035));
+}
+/* The hero's words drift up and fade as their screen scrolls away. */
+.hero-words {
+  opacity: calc(1 - var(--p, 0) * 1.6);
+  transform: translate3d(0, calc(var(--p, 0) * -90px), 0);
+}
+
+/* A card leans and lifts under the pointer, each a little differently. */
+.tilt-card {
+  transition:
+    translate var(--dur-medium) var(--ease-out),
+    rotate var(--dur-medium) var(--ease-out),
+    box-shadow var(--dur-medium) var(--ease-out);
+}
+.tilt-card:is(:hover, :focus-within) {
+  translate: 0 -6px;
+  rotate: -1.1deg;
+  box-shadow: var(--shadow-page);
+}
+.tilt-card:nth-child(even):is(:hover, :focus-within) {
+  rotate: 0.9deg;
+}
+.tilt-card:nth-child(3n):is(:hover, :focus-within) {
+  rotate: 1.3deg;
+}
+/* A stamp sits a little askew, and straightens when its card is picked up. */
+.pixel-stamp {
+  rotate: -5deg;
+  transition:
+    rotate var(--dur-medium) var(--ease-out),
+    scale var(--dur-medium) var(--ease-out);
+}
+.tilt-card:nth-child(even) > .pixel-stamp {
+  rotate: 4deg;
+}
+.group:is(:hover, :focus-within) > .pixel-stamp {
+  rotate: 0deg;
+  scale: 1.08;
+}
+
+/* The report's pages on the colour field. They are laid out at reading size
+   (--read-w) and only ever scaled down from it, so their type stays sharp;
+   at rest they fit a box --rest-h tall, the cover and the contents fanned out
+   behind the finding by --spread of a page's width. A phone has room for the
+   cover alone, and three pages of small print would outweigh the page's own
+   words there. The script moves the stack (--x, --y, --s) and opens the fan
+   (--fan). */
+.report-show {
+  --rest-h: min(36svh, 320px);
+  --spread: 0.36;
+  /* On a phone the page's margins fall outside the screen, so its column of
+     text (0.812 of the page) spans the screen and every line is read whole. */
+  --read-w: calc((100vw - 16px) / 0.812);
+}
+@media (min-width: 640px) {
+  .report-show {
+    --rest-h: min(40svh, 440px);
+    --spread: 0.5;
+    --read-w: min(100vw - 3rem, 860px);
+  }
+}
+@media (min-width: 1024px) {
+  .report-show {
+    --rest-h: min(64svh, 620px, 42vw);
+    --spread: 0.46;
+    --read-w: calc(var(--rest-h) * 2 * 0.7071);
+  }
+}
+@media (min-width: 1280px) {
+  .report-show {
+    --spread: 0.8;
+  }
+}
+.report-rest {
+  height: var(--rest-h);
+  width: calc(var(--rest-h) * 0.7071 * (1 + var(--spread)));
+  max-width: 100%;
+}
+.report-stack {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  /* The column is the stack's width, never the width of what is in it. */
+  grid-template-columns: minmax(0, 1fr);
+  width: var(--read-w);
+  transform-origin: 0 0;
+  transform: translate(var(--x, 0px), var(--y, 0px)) scale(var(--s, 1));
+  /* Letters keep their true places at every scale, instead of snapping to
+     whole pixels of the size they were laid out at. */
+  text-rendering: geometricPrecision;
+}
+.report-page {
+  grid-area: 1 / 1;
+  height: 100%;
+  transform-origin: 50% 100%;
+}
+.report-page[data-page="cover"] {
+  translate: calc(var(--fan, 1) * var(--spread) * -100%) calc(var(--fan, 1) * 1.2%);
+  rotate: calc(var(--fan, 1) * -4deg);
+  opacity: min(1, calc(var(--fan, 1) * 6));
+}
+.report-page[data-page="contents"] {
+  translate: calc(var(--fan, 1) * var(--spread) * -50%) calc(var(--fan, 1) * 0.4%);
+  rotate: calc(var(--fan, 1) * -2deg);
+  opacity: min(1, calc(var(--fan, 1) * 6));
+}
+
+/* The footer lies under the page and is uncovered as the page's foot rises:
+   --reveal runs from 0 to 1. Its words settle into place (never faded: they
+   are on screen, if covered, the whole time) and the cicada's
+   wings open as it comes into view. It only waits there (data-curtain) when
+   one screen can hold all of it. */
+.site-footer {
+  --fold: calc(1 - var(--reveal, 1));
+}
+.site-footer[data-curtain] {
+  position: sticky;
+  bottom: 0;
+}
+.footer-words {
+  transform: translate3d(0, calc((1 - var(--reveal, 1)) * -64px), 0);
+}
+/* Until the page starts to lift, the big cicada is under it: not worth drawing. */
+.site-footer:not([data-live]) .footer-cicada {
+  visibility: hidden;
+}
+/* A page that ends in its own colour still reads as lying over the footer. */
+.page-edge {
+  box-shadow: 0 28px 56px -28px rgb(var(--brand-shadow) / 0.3);
+}
+
+/* The cicada: a body and two wings, each wing turning on its hinge. --fold
+   closes the wings (0 open, 1 shut); a beat is a greeting; idle is slow. */
+.cicada-fold {
+  transform-origin: var(--hinge) 50%;
+  transform: scaleX(calc(1 - var(--fold, 0) * var(--side) * var(--side) * 0.5))
+    skewY(calc(var(--fold, 0) * var(--side) * 9deg));
+}
+.cicada-wing {
+  transform-origin: var(--hinge) 50%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .cicada[data-beat] .cicada-wing {
+    animation: wing-beat-left var(--beat) var(--ease-in-out) var(--beats);
+  }
+  .cicada[data-beat] .cicada-wing[data-side="right"] {
+    animation-name: wing-beat-right;
+  }
+  [data-live] .cicada[data-flap="idle"] .cicada-wing {
+    animation: wing-idle-left 6.4s var(--ease-in-out) infinite;
+  }
+  [data-live] .cicada[data-flap="idle"] .cicada-wing[data-side="right"] {
+    animation-name: wing-idle-right;
+  }
 }
 
 /* Scroll-told content: fades and lifts in once its section's --said passes the
@@ -1326,13 +1598,6 @@ a.btn-raised:hover {
     radial-gradient(900px 420px at 78% -140px, rgb(var(--brand-glow) / 0.16), transparent 70%),
     radial-gradient(700px 360px at 8% -180px, rgb(var(--brand-glow) / 0.09), transparent 70%);
 }
-.pixelated {
-  image-rendering: pixelated;
-}
-.hatched path {
-  fill: url("#hatch");
-}
-
 /* A sheet of the report: always paper white with the light palette, whatever
    the theme around it, because that is how it prints. */
 .sheet {

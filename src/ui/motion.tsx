@@ -1,18 +1,16 @@
-import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from "react";
+import { type CSSProperties, type ElementType, type ReactNode, useEffect, useState } from "react";
 import { cx } from "./primitives";
+import { reducedMotion, useScrollProgress } from "./scroll";
 
-const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-/** How long a phrase is held, and how long its words take to fold away. */
-const HOLD = 3200;
-const FOLD = 420;
-const STAGGER = 70;
+/** How long a phrase is held before the next one wipes over it. */
+const HOLD = 3600;
 
 /**
- * A headline whose words each arrive through a pixel block. Given two
- * phrases, it shows the first, folds its words back into their pixels, brings
- * in the second word by word, and goes on trading one for the other every few
- * seconds. With reduced motion it shows the second and stays.
+ * A headline that trades one phrase for another, line by line: a block of
+ * pixels crosses each line, taking the old words with it and leaving the new
+ * ones behind. Both phrases are always laid out, one over the other, so the
+ * trade moves nothing around it. With reduced motion it shows the second
+ * phrase and stays.
  */
 export function SwapHeadline({
   first,
@@ -24,159 +22,74 @@ export function SwapHeadline({
   then: string[];
   className?: string;
 }) {
-  const [phrase, setPhrase] = useState(first);
-  const [leaving, setLeaving] = useState(false);
-  // The phrases are compared by their text, so a parent re-rendering with equal
-  // arrays never restarts the cycle.
-  const one = first.join("\n");
-  const two = then.join("\n");
+  // "start" wipes the first phrase in; after that the two take turns.
+  const [shown, setShown] = useState<"start" | 0 | 1 | "rest">("start");
   useEffect(() => {
-    const phrases = [one.split("\n"), two.split("\n")] as const;
-    if (reduced()) {
-      setPhrase(phrases[1]);
+    if (reducedMotion()) {
+      setShown("rest");
       return;
     }
-    let shown: 0 | 1 = 0;
-    let timer: ReturnType<typeof setTimeout>;
-    const hold = () => {
-      timer = setTimeout(() => {
-        setLeaving(true);
-        const words = phrases[shown].join(" ").split(" ").length;
-        timer = setTimeout(
-          () => {
-            shown = shown === 0 ? 1 : 0;
-            setPhrase(phrases[shown]);
-            setLeaving(false);
-            hold();
-          },
-          FOLD + (words - 1) * STAGGER,
-        );
-      }, HOLD);
-    };
-    setPhrase(phrases[0]);
-    hold();
-    return () => clearTimeout(timer);
-  }, [one, two]);
-  let index = 0;
+    const timer = setInterval(() => setShown((now) => (now === 1 ? 0 : 1)), HOLD);
+    return () => clearInterval(timer);
+  }, []);
+  const lines = Math.max(first.length, then.length);
   return (
     <h1 className={className} aria-label={then.join(" ")}>
-      <span key={phrase.join("|")} aria-hidden="true" data-leaving={leaving || undefined}>
-        {phrase.map((line) => (
-          <span key={line} className="block">
-            {line.split(" ").map((word) => (
+      {Array.from({ length: lines }, (_, i) => (
+        <span
+          // biome-ignore lint/suspicious/noArrayIndexKey: the lines of a fixed headline
+          key={i}
+          aria-hidden="true"
+          className="block"
+        >
+          <span className="swap-line" data-show={shown} style={{ "--i": i } as CSSProperties}>
+            {[first[i], then[i]].map((text, face) => (
               <span
-                key={`${word}-${index}`}
-                className="swap-word mr-[0.22em] last:mr-0"
-                style={{ "--i": index++ } as CSSProperties}
+                // biome-ignore lint/suspicious/noArrayIndexKey: the two faces of a line
+                key={face}
+                className="swap-face"
+                data-face={face}
               >
-                <span className="pixel" />
-                <span className="text">{word}</span>
+                <span className="swap-ink">{text}</span>
               </span>
             ))}
+            <span className="swap-wipe">
+              <span className="swap-block">
+                <i />
+                <i />
+                <i />
+                <i />
+              </span>
+            </span>
           </span>
-        ))}
-      </span>
+        </span>
+      ))}
     </h1>
   );
 }
 
-/** Flies its content up into place the first time it scrolls into view. */
-export function FlowIn({
+/**
+ * Brings its content up into place as it scrolls into view, following the
+ * scroll: the entrance every section of a page shares. `delay` starts it a
+ * little later than its neighbours, as a share of the entrance.
+ */
+export function Rise({
+  as: Tag = "div",
   children,
   delay = 0,
   className,
 }: {
+  as?: ElementType;
   children: ReactNode;
   delay?: number;
   className?: string;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || reduced()) return;
-    // Hidden only once scripting is known to work, so it can never stay hidden.
-    el.dataset.flow = "wait";
-    const seen = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry?.isIntersecting) return;
-        el.dataset.flow = "in";
-        seen.disconnect();
-      },
-      { rootMargin: "0px 0px -8% 0px" },
-    );
-    seen.observe(el);
-    // Once landed, the entrance lets go, so hover transforms are the element's own again.
-    const landed = (e: AnimationEvent) => {
-      if (e.target === el) el.dataset.flow = "done";
-    };
-    el.addEventListener("animationend", landed);
-    return () => {
-      seen.disconnect();
-      el.removeEventListener("animationend", landed);
-    };
-  }, []);
+  const ref = useScrollProgress<HTMLElement>("enter", undefined, delay);
   return (
-    <div ref={ref} className={cx(className)} style={{ "--d": `${delay}s` } as CSSProperties}>
+    <Tag ref={ref} className={cx("rise-in", className)}>
       {children}
-    </div>
+    </Tag>
   );
-}
-
-/**
- * Reports how far an element has been scrolled, 0 to 1, by setting `--p` on it.
- * "pin" measures the way through a tall element that pins a screen inside it;
- * "exit" measures an element leaving through the top of the screen. The value
- * eases after the scroll position instead of jumping with each wheel tick.
- * The page scrolls inside a container, so every scroll is heard.
- */
-export function useScrollProgress<T extends HTMLElement>(
-  onProgress?: (p: number, el: T) => void,
-  mode: "pin" | "exit" = "pin",
-) {
-  const ref = useRef<T>(null);
-  const handler = useRef(onProgress);
-  handler.current = onProgress;
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const still = reduced();
-    let frame = 0;
-    let target = 0;
-    let shown = -1;
-    let before = 0;
-    const read = () => {
-      const rect = el.getBoundingClientRect();
-      const span = mode === "pin" ? rect.height - window.innerHeight : rect.height;
-      target = span <= 0 ? 0 : Math.min(1, Math.max(0, -rect.top / span));
-    };
-    const step = (now: number) => {
-      frame = 0;
-      const dt = Math.min(64, now - before || 16);
-      before = now;
-      const next =
-        still || shown < 0 ? target : shown + (target - shown) * (1 - Math.exp(-dt / 90));
-      shown = Math.abs(target - next) < 0.0004 ? target : next;
-      el.style.setProperty("--p", shown.toFixed(4));
-      handler.current?.(shown, el);
-      if (shown !== target) frame = requestAnimationFrame(step);
-    };
-    const queue = () => {
-      read();
-      if (!frame) {
-        before = performance.now();
-        frame = requestAnimationFrame(step);
-      }
-    };
-    queue();
-    window.addEventListener("scroll", queue, { capture: true, passive: true });
-    window.addEventListener("resize", queue);
-    return () => {
-      cancelAnimationFrame(frame);
-      window.removeEventListener("scroll", queue, { capture: true });
-      window.removeEventListener("resize", queue);
-    };
-  }, [mode]);
-  return ref;
 }
 
 /**
