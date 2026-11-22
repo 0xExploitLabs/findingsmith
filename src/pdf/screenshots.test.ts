@@ -50,8 +50,15 @@ const SHOTS = new Map<string, PdfImage>([
   ["short", { src: png(1380, 500), width: 1380, height: 500 }],
 ]);
 
-/** How many images the whole report draws when its finding has this write-up. */
-async function imagesIn(body: string): Promise<number> {
+interface Printed {
+  /** How many images the report draws. */
+  images: number;
+  /** Whether the page with the Screenshots heading also has a screenshot. */
+  headingKept: boolean;
+}
+
+/** What the whole report prints when its finding has this write-up. */
+async function print(body: string): Promise<Printed> {
   const project = { ...createProject("Test"), preparedBy: "0xExploitLabs", client: "Repla" };
   const finding = {
     ...createFinding(project.id, 0),
@@ -65,12 +72,19 @@ async function imagesIn(body: string): Promise<number> {
     collect: {},
   }) as Parameters<typeof renderToBuffer>[0];
   const pdf = await getDocument({ data: new Uint8Array(await renderToBuffer(doc)) }).promise;
-  let count = 0;
+  let images = 0;
+  let headingKept = false;
   for (let i = 1; i <= pdf.numPages; i++) {
-    const ops = await (await pdf.getPage(i)).getOperatorList();
-    count += ops.fnArray.filter((op) => op === OPS.paintImageXObject).length;
+    const page = await pdf.getPage(i);
+    const drawn = (await page.getOperatorList()).fnArray.filter(
+      (op) => op === OPS.paintImageXObject,
+    ).length;
+    const text = (await page.getTextContent()).items.map((t) => ("str" in t ? t.str : "")).join("");
+    // The heading is letter-spaced, so its letters come out apart.
+    if (/screenshots/i.test(text.replace(/\s/g, ""))) headingKept = drawn > 0;
+    images += drawn;
   }
-  return count;
+  return { images, headingKept };
 }
 
 /** Prose, evidence in a code block, then the screenshots, as a finding is written. */
@@ -94,16 +108,19 @@ function writeUp(lines: number, screenshots: string): string {
   ].join("\n");
 }
 
-// Wherever the screenshots fall on a page, every one of them is printed. The
-// description grows a line at a time, across more than a page.
+// Wherever the screenshots fall on a page, every one of them is printed, and
+// the heading goes with the first. The description grows a line at a time,
+// across more than a page.
 const POSITIONS = Array.from({ length: 64 }, (_, i) => i);
 
 describe("screenshots in the PDF", () => {
   it.each(POSITIONS)("are all printed, a paragraph each, after %i lines", async (lines) => {
-    expect(await imagesIn(writeUp(lines, "![](asset:tall)\n\n![](asset:short)"))).toBe(2);
+    const printed = await print(writeUp(lines, "![](asset:tall)\n\n![](asset:short)"));
+    expect(printed).toEqual({ images: 2, headingKept: true });
   });
 
   it.each(POSITIONS)("are all printed, in one paragraph, after %i lines", async (lines) => {
-    expect(await imagesIn(writeUp(lines, "![](asset:tall)\n![](asset:short)"))).toBe(2);
+    const printed = await print(writeUp(lines, "![](asset:tall)\n![](asset:short)"));
+    expect(printed).toEqual({ images: 2, headingKept: true });
   });
 });

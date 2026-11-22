@@ -5,7 +5,7 @@ import { compareFindings, type Rating, rate, SEVERITY_HEX } from "../domain/seve
 import { type Finding, type Project, SEVERITIES, type Severity, STATUSES } from "../domain/types";
 import { findSection, splitSections } from "../markdown/sections";
 import { hasContent } from "../markdown/text";
-import { Flow, MarkdownPdf, type MdContext, type PdfImage } from "./markdown";
+import { Flow, keepWithStart, MarkdownPdf, type MdContext, type PdfImage } from "./markdown";
 import {
   coverPixels,
   DISPLAY,
@@ -1104,7 +1104,7 @@ function FindingDetail({
         <Flow key={`${i}-${title}`} style={{ marginTop: 16 }}>
           {title ? (
             <Text
-              minPresenceAhead={50}
+              minPresenceAhead={keepWithStart(md, ctx, 50)}
               style={{
                 fontSize: 7.4,
                 fontWeight: 700,
