@@ -5,7 +5,7 @@ import { compareFindings, type Rating, rate, SEVERITY_HEX } from "../domain/seve
 import { type Finding, type Project, SEVERITIES, type Severity, STATUSES } from "../domain/types";
 import { findSection, splitSections } from "../markdown/sections";
 import { hasContent } from "../markdown/text";
-import { MarkdownPdf, type MdContext, type PdfImage } from "./markdown";
+import { Flow, MarkdownPdf, type MdContext, type PdfImage } from "./markdown";
 import {
   coverPixels,
   DISPLAY,
@@ -699,7 +699,7 @@ function ExecutiveSummary({
   }
   const total = items.length;
   return (
-    <View>
+    <Flow>
       <SectionTitle num={num} title={title} accent={ctx.accent} />
       {hasContent(source) ? <MarkdownPdf source={source} ctx={ctx} /> : null}
 
@@ -759,7 +759,7 @@ function ExecutiveSummary({
                 .join(", ")}.`}
         </Text>
       </View>
-    </View>
+    </Flow>
   );
 }
 
@@ -776,16 +776,16 @@ function Prose({
   ctx: MdContext;
 }) {
   return (
-    <View>
+    <Flow>
       <SectionTitle num={num} title={title} accent={ctx.accent} />
       <MarkdownPdf source={source} ctx={ctx} />
-    </View>
+    </Flow>
   );
 }
 
 function Overview({ num, items, ctx }: { num: string; items: Numbered[]; ctx: MdContext }) {
   return (
-    <View>
+    <Flow>
       <SectionTitle num={num} title="Findings overview" accent={ctx.accent} />
       {items.length === 0 ? (
         <Text style={{ fontSize: 9.6, color: MUTED }}>
@@ -821,7 +821,7 @@ function Overview({ num, items, ctx }: { num: string; items: Numbered[]; ctx: Md
           ])}
         />
       )}
-    </View>
+    </Flow>
   );
 }
 
@@ -1101,7 +1101,7 @@ function FindingDetail({
       ) : null}
 
       {sections.map(({ title, markdown: md }, i) => (
-        <View key={`${i}-${title}`} style={{ marginTop: 16 }}>
+        <Flow key={`${i}-${title}`} style={{ marginTop: 16 }}>
           {title ? (
             <Text
               minPresenceAhead={50}
@@ -1118,7 +1118,7 @@ function FindingDetail({
             </Text>
           ) : null}
           <MarkdownPdf source={md} ctx={ctx} />
-        </View>
+        </Flow>
       ))}
     </View>
   );
@@ -1139,7 +1139,7 @@ const GUIDANCE: Record<Severity, string> = {
 
 function Appendix({ accent }: { accent: string }) {
   return (
-    <View>
+    <Flow>
       <SectionTitle num="A" title="Severity rating" accent={accent} />
       <Text style={{ fontSize: 9.6, lineHeight: 1.55, color: INK }}>
         Each finding’s severity is the qualitative rating of its CVSS base score, using the scale
@@ -1166,6 +1166,6 @@ function Appendix({ accent }: { accent: string }) {
       <Text style={{ fontSize: 8.4, lineHeight: 1.55, color: MUTED, marginTop: 14 }}>
         CVSS (Common Vulnerability Scoring System) is maintained by FIRST: first.org/cvss.
       </Text>
-    </View>
+    </Flow>
   );
 }

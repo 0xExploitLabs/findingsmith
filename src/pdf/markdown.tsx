@@ -10,7 +10,7 @@ import type {
   Table,
   TableCell,
 } from "mdast";
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { highlightCode } from "../markdown/highlight";
 import { parseMarkdown } from "../markdown/parse";
 import { htmlAsText } from "../markdown/text";
@@ -31,10 +31,34 @@ export interface MdContext {
 
 const BODY = { fontFamily: SANS, fontSize: 9.6, lineHeight: 1.55, color: INK };
 
+/**
+ * A box of report content that can run across pages. It opens with an empty
+ * marker so that react-pdf never sees its first real part as the first thing
+ * on the page. react-pdf decides that by looking only at the parts before it
+ * in its own box, and then gets two things wrong: a box whose parts all go to
+ * the next page is kept on this one instead, hanging off the bottom, so a
+ * screenshot at a page break was lost; and a heading may not move down to
+ * stay with what follows it.
+ */
+export function Flow({
+  children,
+  style,
+}: {
+  children: ReactNode;
+  style?: ComponentProps<typeof View>["style"];
+}) {
+  return (
+    <View style={style}>
+      <View />
+      {children}
+    </View>
+  );
+}
+
 /** Renders Markdown as typeset PDF content. Raw Markdown syntax never reaches the page. */
 export function MarkdownPdf({ source, ctx }: { source: string; ctx: MdContext }) {
   const tree: Root = parseMarkdown(source);
-  return <View>{blocks(tree.children, ctx, "r")}</View>;
+  return <Flow>{blocks(tree.children, ctx, "r")}</Flow>;
 }
 
 function blocks(nodes: RootContent[], ctx: MdContext, key: string): ReactNode[] {
