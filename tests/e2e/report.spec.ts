@@ -204,6 +204,38 @@ test("with reduced motion the page is at rest: nothing pinned, hidden or flappin
   await expect(page.getByRole("link", { name: "Open your projects" })).toBeVisible();
 });
 
+test("search engines and link previews find the page, its sitemap and its picture", async ({
+  page,
+  request,
+}) => {
+  const site = "https://findingsmith.0xexploitlabs.org";
+  // Served as files, not as the app: an unknown address would answer with the page itself.
+  const robots = await request.get("/robots.txt");
+  expect(robots.headers()["content-type"]).toContain("text/plain");
+  expect(await robots.text()).toContain(`Sitemap: ${site}/sitemap.xml`);
+  const sitemap = await request.get("/sitemap.xml");
+  expect(sitemap.headers()["content-type"]).toContain("xml");
+  expect(await sitemap.text()).toContain(`<loc>${site}/</loc>`);
+
+  await page.goto("/");
+  const meta = (name: string) => page.locator(`meta[property="${name}"], meta[name="${name}"]`);
+  await expect(meta("og:image")).toHaveAttribute("content", `${site}/og.png`);
+  await expect(meta("twitter:card")).toHaveAttribute("content", "summary_large_image");
+  const picture = await request.get("/og.png");
+  expect(picture.headers()["content-type"]).toBe("image/png");
+  const size = await page.evaluate(async () => {
+    const img = new Image();
+    img.src = "/og.png";
+    await img.decode();
+    return [img.naturalWidth, img.naturalHeight];
+  });
+  expect(size).toEqual([1200, 630]);
+  const data = JSON.parse(
+    (await page.locator('script[type="application/ld+json"]').textContent()) ?? "",
+  );
+  expect(data).toMatchObject({ "@type": "WebApplication", url: `${site}/` });
+});
+
 test("the source code is a click away, and the header fits a phone", async ({ page }) => {
   await page.goto("/");
   const repo = "https://github.com/0xExploitLabs/findingsmith";
