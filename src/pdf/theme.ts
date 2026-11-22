@@ -8,12 +8,13 @@ let registered = false;
  * "Fonts"). Noto Sans is the fallback for Greek and Cyrillic, which 0x Sans
  * does not draw. There is no italic master, so italic maps to the upright.
  */
-export function registerFonts(): void {
+export function registerFonts(root = ""): void {
   if (registered) return;
   registered = true;
-  const both = (src: string, fontWeight: number) => [
-    { src, fontWeight },
-    { src, fontWeight, fontStyle: "italic" as const },
+  // The site serves the fonts from /fonts; a test reads them from disk.
+  const both = (file: string, fontWeight: number) => [
+    { src: `${root}${file}`, fontWeight },
+    { src: `${root}${file}`, fontWeight, fontStyle: "italic" as const },
   ];
   Font.register({
     family: "Sans",
