@@ -1400,6 +1400,15 @@
   height: 100%;
   transform-origin: 50% 100%;
 }
+/* The typeset finding and its drawing in pixels trade places: --real is 0
+   while the view is inside the drawing, 1 once it has drawn back. */
+.report-page[data-page="finding"] {
+  opacity: var(--real, 1);
+}
+.report-drawn {
+  opacity: calc(1 - var(--real, 1));
+  pointer-events: none;
+}
 .report-page[data-page="cover"] {
   translate: calc(var(--fan, 1) * var(--spread) * -100%) calc(var(--fan, 1) * 1.2%);
   rotate: calc(var(--fan, 1) * -4deg);
@@ -1430,11 +1439,7 @@
 .site-footer:not([data-live]) .footer-cicada {
   visibility: hidden;
 }
-/* A page that ends in its own colour still reads as lying over the footer. */
-.page-edge {
-  box-shadow: 0 28px 56px -28px rgb(var(--brand-shadow) / 0.3);
-}
-
+/* Where the page does not lift off it, the footer is simply there, at rest. */
 /* The cicada: a body and two wings, each wing turning on its hinge. --fold
    closes the wings (0 open, 1 shut); a beat is a greeting; idle is slow. */
 .cicada-fold {
