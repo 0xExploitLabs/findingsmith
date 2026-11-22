@@ -492,6 +492,40 @@ test("Ctrl+K opens search, in the editor too, where the link shortcut moved asid
   await expect(editor).toContainText("[link text](https://)");
 });
 
+test("search lists what the query names, best match first, and forgives a slip", async ({
+  page,
+}) => {
+  await newProject(page);
+  for (const title of [
+    "Unauthenticated Bull Board Queue Dashboard Exposure",
+    "X-Forwarded-Host reflected in canonical/hreflang Link headers",
+    "Server-Side Request Forgery (SSRF) via createPlaylist",
+  ]) {
+    await blankFinding(page, title);
+  }
+  await page.keyboard.press("Control+k");
+  const search = page.getByLabel("Search findings and commands");
+  const results = page.getByRole("list", { name: "Results" }).getByRole("button");
+
+  // Its letters are in "dashboard exposure F-02" too, but only the SSRF finding names it.
+  await search.fill("ssrf");
+  await expect(results).toHaveCount(1);
+  await expect(results).toContainText(["Server-Side Request Forgery"]);
+
+  await search.fill("xfh");
+  await expect(results).toContainText(["X-Forwarded-Host"]);
+  await expect(results).toHaveCount(1);
+
+  await search.fill("forgrey");
+  await expect(results).toContainText(["Server-Side Request Forgery"]);
+
+  // The best match is first, and Enter opens it.
+  await search.fill("board");
+  await expect(results.first()).toContainText("Bull Board");
+  await page.keyboard.press("Enter");
+  await expect(page.getByLabel("Title")).toHaveValue(/Bull Board/);
+});
+
 test("the sidebar folds to a rail of icons and stays that way", async ({ page }) => {
   await newProject(page);
   await page.getByRole("button", { name: "Add finding" }).click();

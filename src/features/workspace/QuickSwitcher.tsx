@@ -12,6 +12,7 @@ import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { rate } from "../../domain/severity";
 import type { Finding } from "../../domain/types";
 import { cx, Dialog, SEVERITY_CLASS } from "../../ui/primitives";
+import { fuzzyFilter } from "./fuzzy";
 
 export interface SwitcherAction {
   id: string;
@@ -26,19 +27,6 @@ interface Entry {
   detail?: ReactNode;
   icon: ReactNode;
   run: () => void;
-}
-
-/** True when every character of the query appears in the text, in order. */
-function matches(text: string, query: string): boolean {
-  const t = text.toLowerCase();
-  let at = 0;
-  for (const ch of query.toLowerCase()) {
-    if (ch === " ") continue;
-    at = t.indexOf(ch, at);
-    if (at === -1) return false;
-    at++;
-  }
-  return true;
 }
 
 /**
@@ -91,9 +79,7 @@ export function QuickSwitcher({
         };
       });
     const all = [...found, ...actions.map((a) => ({ ...a }))];
-    return query.trim()
-      ? all.filter((e) => matches(`${e.label} ${refs.get(e.id) ?? ""}`, query.trim()))
-      : all;
+    return fuzzyFilter(all, query, (e) => `${e.label} ${refs.get(e.id) ?? ""}`);
   }, [findings, refs, actions, query, onOpenFinding]);
 
   const choose = (e: Entry | undefined) => {
