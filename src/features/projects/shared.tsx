@@ -1,11 +1,12 @@
 import { FileUp, Plus } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
-import { APP_NAME, ORG_NAME, ORG_URL } from "../../brand";
+import { APP_NAME, ORG_NAME, ORG_URL, REPO_URL } from "../../brand";
 import * as db from "../../data/db";
 import { importProject } from "../../data/transfer";
 import { createProject } from "../../domain/factories";
 import type { Finding, Project } from "../../domain/types";
 import { href, navigate, type Route } from "../../state/router";
+import { GitHubMark } from "../../ui/GitHubMark";
 import { Button, cx, Dialog, Field, TextInput } from "../../ui/primitives";
 import { ThemeToggle } from "../../ui/ThemeToggle";
 import { toast } from "../../ui/toast";
@@ -117,7 +118,7 @@ export function SiteShell({
       href={href({ name })}
       aria-current={current === name ? "page" : undefined}
       className={cx(
-        "flex h-8 items-center gap-1.5 rounded-full px-3 text-[13.5px] font-medium transition-colors duration-(--dur-short) ease-(--ease-out)",
+        "flex h-8 items-center gap-1.5 rounded-full px-3 text-[13.5px] max-sm:px-2.5 font-medium transition-colors duration-(--dur-short) ease-(--ease-out)",
         current === name ? "bg-surface-3 text-ink" : "text-ink-muted hover:bg-hover hover:text-ink",
       )}
     >
@@ -139,14 +140,15 @@ export function SiteShell({
         <div className="mx-auto flex h-full max-w-[1240px] items-center gap-2 px-6 [&>*]:pointer-events-auto">
           <nav
             aria-label="Main"
-            className="flex h-11 items-center gap-0.5 rounded-full bg-surface-1 pl-4 pr-1.5 shadow-page"
+            className="flex h-11 items-center gap-0.5 rounded-full bg-surface-1 pl-4 pr-1.5 shadow-page max-sm:pl-3"
           >
             <a
               href={href({ name: "home" })}
               aria-label={`${APP_NAME}, home`}
-              className="mr-2 rounded-md"
+              className="mr-2 rounded-md max-sm:mr-1"
             >
-              <Wordmark compact />
+              {/* A phone has room for the mark alone; the link's label still names it. */}
+              <Wordmark compact className="max-sm:[&>span]:hidden" />
             </a>
             {link("home", "Overview")}
             {link(
@@ -159,15 +161,25 @@ export function SiteShell({
               </>,
             )}
           </nav>
-          <div className="flex-1" />
           <button
             type="button"
             onClick={onNewProject}
-            className="flex h-11 items-center rounded-full bg-ink px-4 text-[13.5px] font-medium text-bg shadow-page transition-transform duration-(--dur-short) ease-(--ease-out) hover:-translate-y-0.5 active:translate-y-0 max-sm:hidden"
+            className="ml-auto flex h-11 items-center rounded-full bg-ink px-4 text-[13.5px] font-medium text-bg shadow-page transition-transform duration-(--dur-short) ease-(--ease-out) hover:-translate-y-0.5 active:translate-y-0 max-sm:hidden"
           >
             Start a report
           </button>
-          <span className="flex size-11 items-center justify-center rounded-full bg-surface-1 shadow-page">
+          <span className="flex h-11 items-center gap-0.5 rounded-full bg-surface-1 px-2 shadow-page max-sm:ml-auto">
+            <a
+              href={REPO_URL}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={`${APP_NAME} on GitHub`}
+              title={`${APP_NAME} on GitHub`}
+              // The narrowest phones have no room for it; the footer links there too.
+              className="max-[359px]:hidden inline-flex size-7 items-center justify-center rounded-lg text-ink-muted transition-[background-color,color,scale] duration-(--dur-short) ease-(--ease-out) hover:bg-hover hover:text-ink active:scale-90 active:bg-press"
+            >
+              <GitHubMark className="size-4" />
+            </a>
             <ThemeToggle />
           </span>
         </div>
@@ -217,6 +229,11 @@ export function SiteShell({
                     <button type="button" onClick={onNewProject} className={FOOT_LINK}>
                       Start a report
                     </button>
+                  </li>
+                  <li>
+                    <a href={REPO_URL} target="_blank" rel="noreferrer" className={FOOT_LINK}>
+                      Source on GitHub
+                    </a>
                   </li>
                 </ul>
               </div>

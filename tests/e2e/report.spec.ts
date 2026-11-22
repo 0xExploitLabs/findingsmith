@@ -85,6 +85,26 @@ test("the overview ends on the typeset page and a footer that leads on", async (
   await expect(page).toHaveURL(/#\/projects$/);
 });
 
+test("the source code is a click away, and the header fits a phone", async ({ page }) => {
+  await page.goto("/");
+  const repo = "https://github.com/0xExploitLabs/findingsmith";
+  await expect(page.getByRole("link", { name: "Findingsmith on GitHub" })).toHaveAttribute(
+    "href",
+    repo,
+  );
+  await expect(page.getByRole("link", { name: "Source on GitHub" })).toHaveAttribute("href", repo);
+
+  // Every pill of the header stays inside the screen, with the page's margin to spare.
+  for (const width of [320, 360, 390]) {
+    await page.setViewportSize({ width, height: 700 });
+    const right = await page
+      .locator("header nav, header span.rounded-full")
+      .evaluateAll((pills) => Math.max(...pills.map((p) => p.getBoundingClientRect().right)));
+    expect(right).toBeLessThanOrEqual(width - 24);
+    await expect(page.getByRole("button", { name: /Switch to/ })).toBeInViewport();
+  }
+});
+
 test("the projects page lists every project and opens its report", async ({ page }) => {
   await newProject(page);
   await page.getByRole("link", { name: "Projects" }).click();

@@ -4,3 +4,5 @@ export const APP_NAME = "Findingsmith";
 export const APP_URL = "https://findingsmith.0xexploitlabs.org";
 export const ORG_NAME = "0xExploitLabs";
 export const ORG_URL = "https://0xexploitlabs.org";
+/** The source code. */
+export const REPO_URL = "https://github.com/0xExploitLabs/findingsmith";
