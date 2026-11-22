@@ -81,8 +81,127 @@ test("the overview ends on the typeset page and a footer that leads on", async (
   await expect(sheet).toContainText("Critical");
   await expect(sheet).toContainText("Remediation");
 
-  await footer.getByRole("link", { name: "Projects" }).click();
+  // The footer waits under the page until the page lifts off it, so a link in
+  // it that takes focus brings the footer out.
+  await page.locator("#root > div").evaluate((el) => el.scrollTo({ top: 0, behavior: "instant" }));
+  const projects = footer.getByRole("link", { name: "Projects" });
+  await projects.focus();
+  await expect(projects).toBeInViewport({ ratio: 1 });
+  await projects.click();
   await expect(page).toHaveURL(/#\/projects$/);
+});
+
+test("the cloud is different on every load and never covers the words", async ({ page }) => {
+  // How many of the field's pixels are inked inside each box of the hero's words, and its picture.
+  const read = () =>
+    page.evaluate(() => {
+      const canvas = document.querySelector("canvas");
+      const ctx = canvas?.getContext("2d");
+      const words = document.querySelector(".hero-words");
+      if (!canvas || !ctx || !words) throw new Error("no hero");
+      const field = canvas.getBoundingClientRect();
+      const scale = canvas.width / field.width;
+      let inked = 0;
+      for (const child of words.children) {
+        const box = child.getBoundingClientRect();
+        const data = ctx.getImageData(
+          Math.round((box.left - field.left) * scale),
+          Math.round((box.top - field.top) * scale),
+          Math.max(1, Math.round(box.width * scale)),
+          Math.max(1, Math.round(box.height * scale)),
+        ).data;
+        for (let i = 3; i < data.length; i += 4) if (data[i]) inked++;
+      }
+      const all = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      let total = 0;
+      for (let i = 3; i < all.length; i += 4) if (all[i]) total++;
+      return { inked, total, picture: canvas.toDataURL() };
+    });
+  const pictures = new Set<string>();
+  for (const [width, height] of [
+    [1440, 900],
+    [390, 844],
+    [320, 640],
+  ] as const) {
+    await page.setViewportSize({ width, height });
+    await page.goto("/");
+    await page.reload();
+    await expect(page.getByRole("button", { name: "New project" }).first()).toBeVisible();
+    // Once the faces have loaded and the words have risen into place.
+    await page.evaluate(() => document.fonts.ready);
+    await page.waitForTimeout(1500);
+    const { inked, total, picture } = await read();
+    expect(inked).toBe(0);
+    // And there is a cloud: a good share of the screen is inked.
+    expect(total).toBeGreaterThan(width * height * 0.12);
+    pictures.add(picture);
+  }
+  await page.reload();
+  pictures.add((await read()).picture);
+  expect(pictures.size).toBe(4);
+});
+
+test("the sample finding is a whole page, as the report prints it", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("heading", { name: "Built to be read" }).scrollIntoViewIfNeeded();
+  const sheet = page.locator("article.sheet");
+  for (const part of [
+    "Critical",
+    "9.8",
+    "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+    "POST https://app.example.com/login",
+    "Description",
+    "Steps to reproduce",
+    "Evidence",
+    "username=admin'--&password=x",
+    "Impact",
+    "Remediation",
+  ]) {
+    await expect(sheet).toContainText(part);
+  }
+  // Set in the report's own face, and beside it the cover and the contents.
+  expect(await sheet.evaluate((el) => getComputedStyle(el).fontFamily)).toContain("Report Sans");
+  await expect(page.locator(".report-page")).toHaveCount(3);
+});
+
+test("the footer says where the organisation is found", async ({ page }) => {
+  await page.goto("/");
+  const footer = page.getByRole("contentinfo");
+  for (const [name, url] of [
+    ["GitHub", "https://github.com/0xExploitLabs"],
+    ["LinkedIn", "https://www.linkedin.com/company/144596930/"],
+    ["X", "https://x.com/0xExploitLabs"],
+    ["Instagram", "https://www.instagram.com/0xexploitlabs/"],
+    ["hello@0xexploitlabs.org", "mailto:hello@0xexploitlabs.org"],
+  ] as const) {
+    await expect(footer.getByRole("link", { name, exact: true })).toHaveAttribute("href", url);
+  }
+});
+
+test("with reduced motion the page is at rest: nothing pinned, hidden or flapping", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  // The headline shows the phrase it is labelled with, and stays.
+  const shown = page.locator('h1 [data-face="1"]');
+  await expect(shown.first()).toBeVisible();
+  await expect(page.locator('h1 [data-face="0"]').first()).toBeHidden();
+  // Every section is in place before any scrolling, and the report is not pinned.
+  const state = await page.evaluate(() => ({
+    faint: [...document.querySelectorAll(".rise-in")].filter(
+      (el) => getComputedStyle(el).opacity !== "1",
+    ).length,
+    pinned: (document.querySelector(".report-show")?.clientHeight ?? 0) > window.innerHeight * 1.6,
+    smooth: document.querySelector(".lenis") !== null,
+    curtain: document.querySelector("footer[data-curtain]") !== null,
+    beating: [...document.querySelectorAll(".cicada-wing")].filter(
+      (el) => getComputedStyle(el).animationName !== "none",
+    ).length,
+  }));
+  expect(state).toEqual({ faint: 0, pinned: false, smooth: false, curtain: false, beating: 0 });
+  await page.getByRole("heading", { name: "Built to be read" }).scrollIntoViewIfNeeded();
+  await expect(page.getByRole("link", { name: "Open your projects" })).toBeVisible();
 });
 
 test("the source code is a click away, and the header fits a phone", async ({ page }) => {
