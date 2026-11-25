@@ -7,7 +7,7 @@
 
 # Findingsmith, by 0xExploitLabs
 
-Findingsmith is a penetration test report writer that runs entirely in your browser.
+Findingsmith is a pentest report generator that runs entirely in your browser.
 You write each finding like a note, give it a CVSS vector and your evidence, and download a typeset PDF your client can read.
 There is no account and no server: your projects live in your browser and never leave your device.
 
@@ -54,6 +54,23 @@ Because nothing is uploaded, you can use it on an engagement without asking anyo
 - **Fast to move around.**
   Ctrl+K (Cmd+K on macOS) jumps to any finding or command, and Ctrl+\ folds the sidebar away.
   Light and dark themes, and a layout that works on a phone.
+
+## How it compares
+
+PwnDoc, SysReptor, Ghostwriter and WriteHat are good tools built for a team that runs a server.
+Findingsmith is for a tester who wants to open a tab and write.
+
+|                         | Findingsmith                      | Self-hosted report platforms                |
+| ----------------------- | --------------------------------- | ------------------------------------------- |
+| Setup                   | Open the site, or any static host | A server, a database and accounts           |
+| Where client data lives | Your browser only                 | The server you run or rent                  |
+| Works offline           | Yes                               | Only on the network that reaches the server |
+| Writing                 | Markdown with live preview        | Web forms or Markdown fields                |
+| Output                  | Typeset PDF                       | DOCX or PDF from templates                  |
+| Team collaboration      | Export and share a project file   | Built in                                    |
+
+If several people edit one report at the same time, a server-based tool fits better.
+If you work alone or cannot let client data leave your machine, Findingsmith is quicker to start with.
 
 ## How a report is put together
 
